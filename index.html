@@ -120,133 +120,6 @@
 
 
 
-// === CONTROLS ===
-
-const joystick = document.getElementById('joystick');
-const joystickIndicator = document.getElementById('joystick-indicator');
-let joystickCenter = { x: 0, y: 0 };
-
-// Style joystick elements
-const styleJoysticks = () => {
-    Object.assign(joystick.style, {
-        position: 'absolute',
-        bottom: '20px',
-        left: '20px',
-        width: '100px',
-        height: '100px',
-        background: 'rgba(255, 255, 255, 0.2)',
-        borderRadius: '50%',
-        display: 'none'
-    });
-
-    Object.assign(joystickIndicator.style, {
-        position: 'absolute',
-        width: '40px',
-        height: '40px',
-        background: 'rgba(255, 255, 255, 0.5)',
-        borderRadius: '50%',
-        top: '50%',
-        left: '50%',
-        transform: 'translate(-50%, -50%)'
-    });
-};
-
-styleJoysticks();
-
-// === INPUT CONTROLLER ===
-
-const inputController = {
-    gamepadIndex: null,
-    keys: { w: false, a: false, s: false, d: false },
-
-    updateVelocity: () => {
-        if (inputController.keys.w || player.movingKeys['ArrowUp']) {
-            player.velocityY -= player.acceleration;
-        }
-        if (inputController.keys.s || player.movingKeys['ArrowDown']) {
-            player.velocityY += player.acceleration;
-        }
-        if (inputController.keys.a || player.movingKeys['ArrowLeft']) {
-            player.velocityX -= player.acceleration;
-        }
-        if (inputController.keys.d || player.movingKeys['ArrowRight']) {
-            player.velocityX += player.acceleration;
-        }
-
-        if (inputController.gamepadIndex !== null) {
-            const gamepad = navigator.getGamepads()[inputController.gamepadIndex];
-            if (gamepad) {
-                const axisX = applyDeadzone(gamepad.axes[0]);
-                const axisY = applyDeadzone(gamepad.axes[1]);
-
-                player.velocityX += axisX * player.acceleration;
-                player.velocityY += axisY * player.acceleration;
-            }
-        }
-    }
-};
-
-const applyDeadzone = (value, threshold = 0.1) => {
-    return Math.abs(value) < threshold ? 0 : value;
-};
-
-// === GAMEPAD EVENTS ===
-
-window.addEventListener("gamepadconnected", (e) => {
-    inputController.gamepadIndex = e.gamepad.index;
-    console.log("Gamepad connected:", e.gamepad.id);
-});
-
-window.addEventListener("gamepaddisconnected", () => {
-    inputController.gamepadIndex = null;
-    console.log("Gamepad disconnected");
-});
-
-// === JOYSTICK EVENTS ===
-
-joystick.addEventListener('touchstart', (event) => {
-    joystick.style.display = 'block';
-    const rect = joystick.getBoundingClientRect();
-    joystickCenter = {
-        x: rect.left + rect.width / 2,
-        y: rect.top + rect.height / 2
-    };
-});
-
-joystick.addEventListener('touchmove', (event) => {
-    const touch = event.touches[0];
-    const dx = touch.clientX - joystickCenter.x;
-    const dy = touch.clientY - joystickCenter.y;
-    const distance = Math.sqrt(dx * dx + dy * dy);
-    const maxDistance = 50;
-
-    const angle = Math.atan2(dy, dx);
-    const offsetX = Math.cos(angle) * Math.min(distance, maxDistance);
-    const offsetY = Math.sin(angle) * Math.min(distance, maxDistance);
-
-    joystickIndicator.style.left = `${50 + offsetX}px`;
-    joystickIndicator.style.top = `${50 + offsetY}px`;
-
-    inputController.keys.w = dy < -10;
-    inputController.keys.s = dy > 10;
-    inputController.keys.a = dx < -10;
-    inputController.keys.d = dx > 10;
-});
-
-joystick.addEventListener('touchend', () => {
-    joystick.style.display = 'none';
-    inputController.keys.w = false;
-    inputController.keys.a = false;
-    inputController.keys.s = false;
-    inputController.keys.d = false;
-
-    joystickIndicator.style.left = '50%';
-    joystickIndicator.style.top = '50%';
-});
-
-//SHARED STATE
-
-
         let player = {
             element: document.getElementById('player'),
             positionX: 1000,
@@ -324,8 +197,57 @@ function handleCollision(closestPoint) {
 }
 
 
+//  CONTROLS
+
+        
+window.addEventListener("gamepadconnected", (e) => {
+    inputController.gamepadIndex = e.gamepad.index;
+    console.log("Gamepad connected:", e.gamepad.id);
+});
+
+window.addEventListener("gamepaddisconnected", () => {
+    inputController.gamepadIndex = null;
+    console.log("Gamepad disconnected");
+});
 
 
+// INPUT CONTROLLER
+
+const inputController = {
+    gamepadIndex: null,
+    keys: { w: false, a: false, s: false, d: false }, 
+
+    updateVelocity: () => {
+
+        if (inputController.keys.w || player.movingKeys['ArrowUp']) {
+            player.velocityY -= player.acceleration;
+        }
+        if (inputController.keys.s || player.movingKeys['ArrowDown']) {
+            player.velocityY += player.acceleration;
+        }
+        if (inputController.keys.a || player.movingKeys['ArrowLeft']) {
+            player.velocityX -= player.acceleration;
+        }
+        if (inputController.keys.d || player.movingKeys['ArrowRight']) {
+            player.velocityX += player.acceleration;
+        }
+
+        if (inputController.gamepadIndex !== null) {
+            const gamepad = navigator.getGamepads()[inputController.gamepadIndex];
+            if (gamepad) {
+                const axisX = gamepad.axes[0];
+                const axisY = gamepad.axes[1];
+
+                if (Math.abs(axisX) > 0.1) {
+                    player.velocityX += axisX * player.acceleration;
+                }
+                if (Math.abs(axisY) > 0.1) {
+                    player.velocityY += axisY * player.acceleration;
+                }
+            }
+        }
+    }
+};
 
 //SPRITE CONTROLLER
 
@@ -730,8 +652,10 @@ function updateMonsters() {
     }
 }
 
-//
 
+
+
+   
    updateGame();
 
     </script>
