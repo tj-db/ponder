@@ -1,4 +1,6 @@
 <!DOCTYPE html>
+<!-- Legal Footnote: This content is subject to copyright and should not be reproduced without permission. -->
+<!-- Written and created by Thomas John-Michael de Beer, feel free to contact me via tjdebeer@gmail.com  -->
 <html lang="en">
 <head>
     <meta charset="UTF-8">
@@ -26,7 +28,7 @@
             position: absolute;
             width: 2000px;
             height: 2000px;
-           background-image: url('level3.webp');
+            background-image: url('level3.webp');
             background-size: 1000px 1000px;
             background-position: center;
             background-repeat: no-repeat;
@@ -90,6 +92,11 @@
             height: 100px;
             background-image: url('spritesheet.png');
             background-repeat: no-repeat;
+            z-index: 1;
+        }
+       
+        .remotePlayer {
+            z-index: 1;
         }
 
     </style>
@@ -141,7 +148,82 @@ const monsters = {};
         const playerElement = document.getElementById('player');
 
 
-//COLLISIONS
+
+// Z-INDEX
+
+function updatePlayerZIndex() {
+    const allPlayers = [];
+    
+    allPlayers.push({
+        element: playerElement,
+        y: player.positionY,
+        id: 'local'
+    });
+    
+    for (const id in remotePlayers) {
+        const remotePlayer = remotePlayers[id];
+        if (remotePlayer && remotePlayer.element) {
+            allPlayers.push({
+                element: remotePlayer.element,
+                y: remotePlayer.yPercent,
+                id: id
+            });
+        }
+    }
+    
+    allPlayers.sort((a, b) => a.y - b.y);
+    
+    allPlayers.forEach((player, index) => {
+        player.element.style.zIndex = index + 1;
+    });
+}
+
+
+// COLLISIONS
+
+function checkPlayerCollisions() {
+    const playerRadius = 30;
+    
+    for (const id in remotePlayers) {
+        const remotePlayer = remotePlayers[id];
+        if (!remotePlayer || !remotePlayer.element) continue;
+        
+        const dx = player.positionX - remotePlayer.xPercent;
+        const dy = player.positionY - remotePlayer.yPercent;
+        const distance = Math.sqrt(dx * dx + dy * dy);
+        
+        if (distance < playerRadius * 2) {
+            handlePlayerCollision(dx, dy, distance, playerRadius * 2);
+        }
+    }
+}
+
+function handlePlayerCollision(dx, dy, distance, minDistance) {
+    if (distance === 0) return;
+    
+    const normalX = dx / distance;
+    const normalY = dy / distance;
+    
+    const overlap = minDistance - distance;
+    
+    const separationForce = overlap * 0.5;
+    player.positionX += normalX * separationForce;
+    player.positionY += normalY * separationForce;
+    
+    const relativeVelocityX = player.velocityX;
+    const relativeVelocityY = player.velocityY;
+    
+    const velocityAlongNormal = relativeVelocityX * normalX + relativeVelocityY * normalY;
+    
+    if (velocityAlongNormal > 0) return;
+    
+    const restitution = 0.3;
+    const impulse = -(1 + restitution) * velocityAlongNormal;
+    
+    player.velocityX += impulse * normalX;
+    player.velocityY += impulse * normalY;
+}
+
 
 function checkCollision() {
     const playerX = player.positionX + playerElement.offsetWidth / 2;
@@ -610,6 +692,7 @@ function updateGame() {
     player.positionY += player.velocityY;
 
     checkCollision();
+    checkPlayerCollisions();
 
     playerElement.style.left = `${player.positionX}px`;
     playerElement.style.top = `${player.positionY}px`;
@@ -627,6 +710,8 @@ function updateGame() {
             updateRemotePlayerSprite(remotePlayer, velocityX, velocityY);
         }
     }
+
+    updatePlayerZIndex();
 
     const currentTime = performance.now();
     if (Math.abs(player.velocityX) > 0.2 || Math.abs(player.velocityY) > 0.2 || currentTime - lastBroadcastTime >= 1000) {
