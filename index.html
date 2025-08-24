@@ -1,0 +1,727 @@
+<!DOCTYPE html>
+
+<!-- Legal Footnote: This content is subject to copyright and should not be reproduced without permission. -->
+<!-- Written and created by Thomas John-Michael de Beer, feel free to contact me via tjdebeer@gmail.com  -->
+
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no, maximum-scale=1, minimum-scale=1">
+    <title>ponder</title>
+    <style>
+        * {
+            user-select: none;
+            -webkit-user-select: none;
+            -ms-user-select: none;
+        }
+        
+        body, html {
+            margin: 0;
+            padding: 0;
+            height: 100%;
+            overflow: hidden;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            background-color: black;
+        }
+
+        #game-map {
+            position: absolute;
+            width: 2000px;
+            height: 2000px;
+           background-image: url('level3.webp');
+            background-size: 1000px 1000px;
+            background-position: center;
+            background-repeat: no-repeat;
+        }
+
+        .SSW1 { background-position: -200px -0px; }
+        .SSW2 { background-position: -200px -100px; }
+        .SSW3 { background-position: -200px -200px; }
+        .SW1 { background-position: -300px -0px; }
+        .SW2 { background-position: -300px -100px; }
+        .SW3 { background-position: -300px -200px; }
+        .SWW1 { background-position: -400px -0px; }
+        .SWW2 { background-position: -400px -100px; }
+        .SWW3 { background-position: -400px -200px; }
+        .W1 { background-position: -500px -0px; }
+        .W2 { background-position: -500px -100px; }
+        .W3 { background-position: -500px -200px; }
+        .NWW1 { background-position: -600px -0px; }
+        .NWW2 { background-position: -600px -100px; }
+        .NWW3 { background-position: -600px -200px; }
+        .NW1 { background-position: -700px -0px; }
+        .NW2 { background-position: -700px -100px; }
+        .NW3 { background-position: -700px -200px; }
+        .NNW1 { background-position: -800px -0px; }
+        .NNW2 { background-position: -800px -100px; }
+        .NNW3 { background-position: -800px -200px; }
+        .N1 { background-position: -900px -0px; }
+        .N2 { background-position: -900px -100px; }
+        .N3 { background-position: -900px -200px; }
+        .NNE1 { background-position: -1000px -0px; }
+        .NNE2 { background-position: -1000px -100px; }
+        .NNE3 { background-position: -1000px -200px; }
+        .NE1 { background-position: -1100px -0px; }
+        .NE2 { background-position: -1100px -100px; }
+        .NE3 { background-position: -1100px -200px; }
+        .NEE1 { background-position: -1200px -0px; }
+        .NEE2 { background-position: -1200px -100px; }
+        .NEE3 { background-position: -1200px -200px; }
+        .E1 { background-position: -1300px -0px; }
+        .E2 { background-position: -1300px -100px; }
+        .E3 { background-position: -1300px -200px; }
+        .SEE1 { background-position: -1400px -0px; }
+        .SEE2 { background-position: -1400px -100px; }
+        .SEE3 { background-position: -1400px -200px; }
+        .SE1 { background-position: -1500px -0px; }
+        .SE2 { background-position: -1500px -100px; }
+        .SE3 { background-position: -1500px -200px; }
+        .SSE1 { background-position: -1600px -0px; }
+        .SSE2 { background-position: -1600px -100px; }
+        .SSE3 { background-position: -1600px -200px; }
+        .S1 { background-position: -100px -0px; }
+        .S2 { background-position: -100px -100px; }
+        .S3 { background-position: -100px -200px; }
+        .idle1 { background-position: -0px -0px; }
+        .idle2 { background-position: -0px -100px; }
+        .idle3 { background-position: -0px -200px; }
+
+        #player {
+            position: absolute;
+            width: 100px;
+            height: 100px;
+            background-image: url('spritesheet.png');
+            background-repeat: no-repeat;
+        }
+
+    </style>
+</head>
+<body>
+
+
+    <div id="game-map">
+        <div id="player" class="idle1"></div>
+
+    <div id="joystick">
+        <div id="joystick-indicator"></div>
+    </div>
+
+<svg id="obstacle-svg" width="2000" height="2000" xmlns="http://www.w3.org/2000/svg">
+    <path id="obstacle-path" 
+          d="M1500,1334.93V1500H500V1362.1l313.82-6.79V1335.9l23.29-1.94v-37.85h58.23l1-35.9,74.72-1.94-1-38.82h21.35l-1-33h29.11l-1-25.23,29.11,1.94-1-30.09,21.35,2-2.91-40.76-29.12-3.88L911.83,967.15l-87.33-67-87.34-57.26-82.48-36.87,209.6-7.76L1005,892.43l126.15,108.68,49.49,46.58,7.77,4.85-6.79,1.94,2.91,34.94,78.6,132.94-1,44.64-34-1.94v34l-47.55-1,2.92,55.32,45.6,1Z" 
+          fill="none" 
+          stroke="transparent" 
+          stroke-width="1" />
+</svg>
+
+    </div>
+
+    <script src="https://unpkg.com/peerjs@1.4.7/dist/peerjs.min.js"></script>
+    <script>
+
+
+//CONTROLS
+
+        const joystick = document.getElementById('joystick');
+        const joystickIndicator = document.getElementById('joystick-indicator');
+        let joystickActive = false;
+        let joystickCenter = { x: 0, y: 0 };
+
+        const styleJoysticks = () => {
+            const joystickStyle = joystick.style;
+            joystickStyle.position = 'absolute';
+            joystickStyle.bottom = '20px';
+            joystickStyle.left = '20px';
+            joystickStyle.width = '100px';
+            joystickStyle.height = '100px';
+            joystickStyle.background = 'rgba(255, 255, 255, 0.2)';
+            joystickStyle.borderRadius = '50%';
+            joystickStyle.display = 'none';
+
+            const joystickIndicatorStyle = joystickIndicator.style;
+            joystickIndicatorStyle.position = 'absolute';
+            joystickIndicatorStyle.width = '40px';
+            joystickIndicatorStyle.height = '40px';
+            joystickIndicatorStyle.background = 'rgba(255, 255, 255, 0.5)';
+            joystickIndicatorStyle.borderRadius = '50%';
+            joystickIndicatorStyle.top = '50%';
+            joystickIndicatorStyle.left = '50%';
+            joystickIndicatorStyle.transform = 'translate(-50%, -50%)';
+        };
+
+        styleJoysticks();
+
+        function updateGamepad() {
+            const gamepads = navigator.getGamepads();
+            gamepad = gamepads[0] || null;
+        }
+
+        function handleJoystickMove(event) {
+            const touch = event.touches[0];
+            const dx = touch.clientX - joystickCenter.x;
+            const dy = touch.clientY - joystickCenter.y;
+            const distance = Math.sqrt(dx * dx + dy * dy);
+            const maxDistance = 50;
+
+            if (distance > maxDistance) {
+                const angle = Math.atan2(dy, dx);
+                joystickIndicator.style.left = `${50 + Math.cos(angle) * maxDistance}%`;
+                joystickIndicator.style.top = `${50 + Math.sin(angle) * maxDistance}%`;
+            } else {
+                joystickIndicator.style.left = `${50 + dx}px`;
+                joystickIndicator.style.top = `${50 + dy}px`;
+            }
+
+            keys.w = dy < -10;
+            keys.s = dy > 10;
+            keys.a = dx < -10;
+            keys.d = dx > 10;
+        }
+
+        function handleJoystickEnd() {
+            joystick.style.display = 'none';
+            keys.w = keys.a = keys.s = keys.d = false;
+        }
+
+   window.addEventListener("gamepadconnected", (e) => {
+    inputController.gamepadIndex = e.gamepad.index;
+    console.log("Gamepad connected:", e.gamepad.id);
+});
+
+window.addEventListener("gamepaddisconnected", () => {
+    inputController.gamepadIndex = null;
+});
+
+
+//SHARED STATE
+
+
+        let player = {
+            element: document.getElementById('player'),
+            positionX: 1000,
+            positionY: 1000,
+            velocityX: 0,
+            velocityY: 0,
+            friction: 0.85,
+            maxVelocity: 6,
+            acceleration: 0.65,
+            spriteIndex: 1,
+            idleFrameTime: 0,
+            movingKeys: {}
+        };
+
+const remotePlayers = {};
+const monsters = {};
+
+        const gameMap = document.getElementById('game-map');
+        const playerElement = document.getElementById('player');
+
+
+//COLLISIONS
+
+function checkCollision() {
+    const playerX = player.positionX + playerElement.offsetWidth / 2;
+    const playerY = player.positionY + playerElement.offsetHeight / 2;
+    const playerRadius = 30;
+
+    const obstaclePath = document.getElementById('obstacle-path');
+    const pathLength = obstaclePath.getTotalLength();
+
+    let isIntersecting = false;
+    let closestPoint = null;
+    let closestDistance = Infinity;
+
+    for (let i = 0; i < pathLength; i++) {
+        const point = obstaclePath.getPointAtLength(i);
+        const distance = Math.sqrt(
+            Math.pow(point.x - playerX, 2) + Math.pow(point.y - playerY, 2)
+        );
+
+        if (distance <= playerRadius) {
+            isIntersecting = true;
+            if (distance < closestDistance) {
+                closestDistance = distance;
+                closestPoint = point;
+            }
+        }
+    }
+
+    if (isIntersecting && closestPoint) {
+        handleCollision(closestPoint);
+    }
+}
+
+function handleCollision(closestPoint) {
+    const playerX = player.positionX + playerElement.offsetWidth / 2;
+    const playerY = player.positionY + playerElement.offsetHeight / 2;
+
+    const dx = closestPoint.x - playerX;
+    const dy = closestPoint.y - playerY;
+
+    const magnitude = Math.sqrt(dx * dx + dy * dy);
+    const unitDx = dx / magnitude;
+    const unitDy = dy / magnitude;
+
+    const playerRadius = 50;
+
+    const dotProduct = player.velocityX * unitDx + player.velocityY * unitDy;
+    if (dotProduct > 0) {
+        const reflectFactor = 6.0;
+        player.velocityX -= dotProduct * unitDx * reflectFactor;
+        player.velocityY -= dotProduct * unitDy * reflectFactor;
+    }
+}
+
+
+
+
+// INPUT CONTROLLER
+
+const inputController = {
+    gamepadIndex: null,
+    keys: { w: false, a: false, s: false, d: false }, 
+
+    updateVelocity: () => {
+
+        if (inputController.keys.w || player.movingKeys['ArrowUp']) {
+            player.velocityY -= player.acceleration;
+        }
+        if (inputController.keys.s || player.movingKeys['ArrowDown']) {
+            player.velocityY += player.acceleration;
+        }
+        if (inputController.keys.a || player.movingKeys['ArrowLeft']) {
+            player.velocityX -= player.acceleration;
+        }
+        if (inputController.keys.d || player.movingKeys['ArrowRight']) {
+            player.velocityX += player.acceleration;
+        }
+
+        if (inputController.gamepadIndex !== null) {
+            const gamepad = navigator.getGamepads()[inputController.gamepadIndex];
+            if (gamepad) {
+                const axisX = gamepad.axes[0];
+                const axisY = gamepad.axes[1];
+
+                if (Math.abs(axisX) > 0.1) {
+                    player.velocityX += axisX * player.acceleration;
+                }
+                if (Math.abs(axisY) > 0.1) {
+                    player.velocityY += axisY * player.acceleration;
+                }
+            }
+        }
+    }
+};
+
+//SPRITE CONTROLLER
+
+const spriteController = {
+    updateSprite: (character) => {
+
+        const { velocityX, velocityY } = character;
+        const direction = getDirection(velocityX, velocityY);
+
+        character.idleFrameTime += 1;
+
+        if (direction !== 'idle') {
+            if (character.idleFrameTime > 10) { 
+                if (character.spriteIndex === 1) {
+                    character.element.className = `${direction}1`;
+                    character.spriteIndex = 2;
+                } else if (character.spriteIndex === 2) {
+                    character.element.className = `${direction}2`;
+                    character.spriteIndex = 3;
+                } else {
+                    character.element.className = `${direction}3`;
+                    character.spriteIndex = 1;
+                }
+                character.idleFrameTime = 0;
+            }
+        } else {
+            if (character.idleFrameTime > 10) {
+                if (character.spriteIndex === 1) {
+                    character.element.className = 'idle1';
+                    character.spriteIndex = 2;
+                } else if (character.spriteIndex === 2) {
+                    character.element.className = 'idle2';
+                    character.spriteIndex = 3;
+                } else {
+                    character.element.className = 'idle3';
+                    character.spriteIndex = 1;
+                }
+                character.idleFrameTime = 0;
+            }
+        }
+    }
+};
+
+
+
+function getDirection(velocityX, velocityY) {
+    if (velocityX === 0 && velocityY === 0) return 'idle';
+
+    const angle = Math.atan2(-velocityY, velocityX) * (180 / Math.PI);
+    const normalizedAngle = (angle + 360) % 360;
+
+    const directions = [
+        'E', 'NEE', 'NE', 'NNE', 'N', 'NNW', 'NW', 'NWW', 
+        'W', 'SWW', 'SW', 'SSW', 'S', 'SSE', 'SE', 'SEE'
+    ];
+
+    const index = Math.floor((normalizedAngle + 11.25) / 22.5) % 16;
+
+    return directions[index];
+}
+
+
+
+// EVENT LISTENERS
+
+document.addEventListener('keydown', (event) => {
+    if (event.key === 'ArrowUp' || event.key === 'ArrowDown' || event.key === 'ArrowLeft' || event.key === 'ArrowRight') {
+        player.movingKeys[event.key] = true;
+    }
+
+    if (event.key === 'w' || event.key === 'a' || event.key === 's' || event.key === 'd') {
+        inputController.keys[event.key] = true;
+    }
+});
+
+document.addEventListener('keyup', (event) => {
+    if (event.key === 'ArrowUp' || event.key === 'ArrowDown' || event.key === 'ArrowLeft' || event.key === 'ArrowRight') {
+        player.movingKeys[event.key] = false;
+    }
+
+    if (event.key === 'w' || event.key === 'a' || event.key === 's' || event.key === 'd') {
+        inputController.keys[event.key] = false;
+    }
+});
+
+
+   
+let peeridno = 0;
+let ExistingPeerIDs = 0;
+let peer = null;
+const maxConnections = 3;
+const connections = new Map();
+   let isConnected = false; 
+
+function initializePeer() {
+    const peerId = `ponderstatichost${peeridno}`;
+    peer = new Peer(peerId, { debug: 2 });
+
+peer.on('open', function (id) {
+    console.log(`Peer started with ID: ${id}`);
+    
+    let connectInterval = setInterval(function() {
+
+        tryToConnectToPeers(id);
+        ExistingPeerIDs++;
+        propagateConnections();
+        
+        if (connections.size > 0) {
+            clearInterval(connectInterval);
+        }
+    }, 888);
+});
+
+    peer.on('connection', function (conn) {
+        if (conn.peer === peer.id || connections.has(conn.peer) || connections.size >= maxConnections) {
+            conn.close();
+            return;
+        }
+
+        connections.set(conn.peer, conn);
+        propagateConnections();
+
+        conn.on('open', function () {
+       isConnected = true; 
+            conn.send({
+                type: 'initial-connections',
+                data: Array.from(connections.keys())
+            });
+            conn.send({
+                type: 'connect-to-others',
+                peers: Array.from(connections.keys())
+            });
+        });
+
+        conn.on('data', handleIncomingData);
+        conn.on('close', function () {
+            connections.delete(conn.peer);
+            propagateConnections();
+        });
+    });
+
+    peer.on('error', function (err) {
+        if (err.type === 'unavailable-id') {
+            peeridno++;
+            initializePeer();
+        }
+    });
+}
+
+function tryToConnectToPeers(currentPeerId) {
+    const targetPeerId = `ponderstatichost${ExistingPeerIDs}`;
+    if (currentPeerId === targetPeerId) {
+        ExistingPeerIDs++;
+        tryToConnectToPeers(currentPeerId);
+        return;
+    }
+
+    const conn = peer.connect(targetPeerId);
+
+    conn.on('open', function () {
+       isConnected = true; 
+        connections.set(targetPeerId, conn);
+        propagateConnections();
+
+        conn.send({ type: 'initial-connections', data: Array.from(connections.keys()) });
+        conn.send({ type: 'connect-to-others', peers: Array.from(connections.keys()) });
+    });
+
+    conn.on('error', function () {
+        ExistingPeerIDs++;
+        tryToConnectToPeers(currentPeerId);
+    });
+
+    conn.on('close', function () {
+        connections.delete(targetPeerId);
+        propagateConnections();
+    });
+
+    conn.on('data', handleIncomingData);
+}
+
+function handleIncomingData(data) {
+    if (data.type === 'connect-to-others') {
+        data.peers.forEach(peerId => {
+            if (!connections.has(peerId) && peerId !== peer.id) {
+                const newConn = peer.connect(peerId);
+
+                newConn.on('open', function () {
+                    connections.set(peerId, newConn);
+                    propagateConnections();
+                    newConn.send(`Hello from ${peer.id}`);
+                });
+
+                newConn.on('error', console.error);
+            }
+        });
+    } else if (data.type === 'initial-connections') {
+        data.data.forEach(peerId => {
+            if (!connections.has(peerId) && peerId !== peer.id) {
+                const newConn = peer.connect(peerId);
+
+                newConn.on('open', function () {
+                    connections.set(peerId, newConn);
+                    propagateConnections();
+                    newConn.send(`Hello from ${peer.id}`);
+                });
+
+                newConn.on('error', console.error);
+            }
+        });
+    } else if (data.type === 'position') {
+        updateRemotePlayerPosition(data);
+    } else if (data.type === 'ping') {
+        console.log(`Ping received: ${data.message}`);
+    }
+}    
+
+function propagateConnections() {
+    const currentConnections = Array.from(connections.keys());
+    connections.forEach(conn => {
+        conn.send({ type: 'connect-to-others', peers: currentConnections });
+    });
+}
+
+const remoteplayerElement = document.getElementById('player');
+const mypeerId = `ponderstatichost${peeridno}`;
+const players = {
+    local: { id: mypeerId, element: remoteplayerElement, positionX: player.positionX, positionY: player.positionY },
+    remote: null
+};
+
+function createPlayer(id, isLocal) {
+    const playerDiv = document.createElement('div');
+    playerDiv.className = 'remotePlayer';
+    playerDiv.style.position = 'absolute';
+    playerDiv.style.width = '100px';
+    playerDiv.style.height = '100px';
+    playerDiv.style.backgroundImage = 'url("spritesheet.png")';
+    gameMap.appendChild(playerDiv);
+
+    return {
+        id,
+        element: playerDiv,
+        positionX: 0,
+        positionY: 0,
+        targetX: 0,
+        targetY: 0,
+        xPercent: 0,
+        yPercent: 0,
+        spriteIndex: 1,
+        idleFrameTime: 0,
+        velocityX: 0,
+        velocityY: 0
+    };
+}
+
+   let lastBroadcastTime = 0;
+   const broadcastInterval = 69;
+
+   function broadcastPosition() {
+    const currentTime = Date.now();
+    if (isConnected && (currentTime - lastBroadcastTime > broadcastInterval)) {
+        const positionData = {
+            type: 'position',
+            id: peer.id,
+            x: player.positionX,
+            y: player.positionY
+        };
+
+        connections.forEach(conn => {
+            conn.send(positionData);
+        });
+
+        lastBroadcastTime = currentTime;
+    }
+}
+
+                     
+function interpolatePosition(remotePlayer, targetXPercent, targetYPercent) {
+    const interpolationFactor = 0.8;
+
+    const deltaX = targetXPercent - remotePlayer.xPercent;
+    const deltaY = targetYPercent - remotePlayer.yPercent;
+
+    remotePlayer.xPercent += deltaX * interpolationFactor;
+    remotePlayer.yPercent += deltaY * interpolationFactor;
+
+    const velocityX = deltaX * interpolationFactor;
+    const velocityY = deltaY * interpolationFactor;
+
+    updateRemotePlayerPositionOnScreen(remotePlayer);
+
+    updateRemotePlayerSprite(remotePlayer, velocityX, velocityY);
+}
+
+function updateRemotePlayerPositionOnScreen(remotePlayer) {
+    if (remotePlayer && remotePlayer.element) {
+        remotePlayer.element.style.left = `${remotePlayer.xPercent}px`;
+        remotePlayer.element.style.top = `${remotePlayer.yPercent}px`;
+    }
+}
+
+function updateRemotePlayerPosition(data) {
+
+    if (!remotePlayers[data.id]) {
+        remotePlayers[data.id] = createPlayer(data.id, false);
+    }
+
+    const remotePlayer = remotePlayers[data.id];
+
+    remotePlayer.targetXPercent = data.x;
+    remotePlayer.targetYPercent = data.y;
+
+    interpolatePosition(remotePlayer, remotePlayer.targetXPercent, remotePlayer.targetYPercent);
+
+    const velocityX = remotePlayer.targetXPercent - remotePlayer.xPercent;
+    const velocityY = remotePlayer.targetYPercent - remotePlayer.yPercent;
+    updateRemotePlayerSprite(remotePlayer, velocityX, velocityY);
+}
+
+function updateRemotePlayerSprite(remotePlayer, velocityX, velocityY) {
+    if (Math.abs(velocityX) < 0.1 && Math.abs(velocityY) < 0.1) {
+        remotePlayer.velocityX = 0;
+        remotePlayer.velocityY = 0;
+    } else {
+        remotePlayer.velocityX = velocityX;
+        remotePlayer.velocityY = velocityY;
+    }
+
+    spriteController.updateSprite(remotePlayer);
+}
+
+   
+   
+initializePeer();
+   
+   
+   
+         
+
+//GAMELOOP
+
+
+function updateGame() {
+    inputController.updateVelocity();
+
+    player.velocityX *= player.friction;
+    player.velocityY *= player.friction;
+
+    if (Math.abs(player.velocityX) < 0.2) player.velocityX = 0;
+    if (Math.abs(player.velocityY) < 0.2) player.velocityY = 0;
+
+    const magnitude = Math.sqrt(player.velocityX ** 2 + player.velocityY ** 2);
+    if (magnitude > player.maxVelocity) {
+        player.velocityX = (player.velocityX / magnitude) * player.maxVelocity;
+        player.velocityY = (player.velocityY / magnitude) * player.maxVelocity;
+    }
+
+    player.positionX += player.velocityX;
+    player.positionY += player.velocityY;
+
+    checkCollision();
+
+    playerElement.style.left = `${player.positionX}px`;
+    playerElement.style.top = `${player.positionY}px`;
+
+    gameMap.style.left = `-${player.positionX - window.innerWidth / 2}px`;
+    gameMap.style.top = `-${player.positionY - window.innerHeight / 2}px`;
+
+    spriteController.updateSprite(player);
+
+    for (const id in remotePlayers) {
+        const remotePlayer = remotePlayers[id];
+        if (remotePlayer) {
+            const velocityX = remotePlayer.targetXPercent - remotePlayer.xPercent;
+            const velocityY = remotePlayer.targetYPercent - remotePlayer.yPercent;
+            updateRemotePlayerSprite(remotePlayer, velocityX, velocityY);
+        }
+    }
+
+    const currentTime = performance.now();
+    if (Math.abs(player.velocityX) > 0.2 || Math.abs(player.velocityY) > 0.2 || currentTime - lastBroadcastTime >= 1000) {
+        broadcastPosition();
+        lastBroadcastTime = currentTime;
+    }
+
+    requestAnimationFrame(updateGame);
+}
+
+//MONSTERS
+
+function updateMonsters() {
+    for (const id in monsters) {
+        const monster = monsters[id];
+        const velocityX = monster.velocityX;
+        const velocityY = monster.velocityY;
+
+        monster.positionX += velocityX;
+        monster.positionY += velocityY;
+
+        spriteController.updateSprite(monster);
+    }
+}
+
+//
+
+   updateGame();
+
+    </script>
+</body>
+</html>
