@@ -1,0 +1,93 @@
+/* Copyright and author note:
+   Written and created by Thomas John-Michael de Beer
+   (contact: tjdebeer@gmail.com) */
+
+* {
+  user-select: none;
+  -webkit-user-select: none;
+  -ms-user-select: none;
+}
+
+html, body {
+  margin: 0;
+  padding: 0;
+  height: 100%;
+  overflow: hidden;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  background-color: black;
+}
+
+#game-map {
+  position: absolute;
+  width: 2000px;
+  height: 2000px;
+  background-image: url('level3.webp');
+  background-size: 1000px 1000px;
+  background-position: center;
+  background-repeat: no-repeat;
+}
+
+.flipped { transform: scaleX(-1); }
+
+.N1 { background-position: -700px -0px; transform: scaleX(-1); }
+.N2 { background-position: -700px -100px; transform: scaleX(-1); }
+.N3 { background-position: -700px -200px; transform: scaleX(-1); }
+
+.S1 { background-position: -300px -0px; }
+.S2 { background-position: -300px -100px; }
+.S3 { background-position: -300px -200px; }
+
+.idle1 { background-position: -0px -0px; }
+.idle2 { background-position: -0px -100px; }
+.idle3 { background-position: -0px -200px; }
+
+.W1 { background-position: -500px -0px; }
+.W2 { background-position: -500px -100px; }
+.W3 { background-position: -500px -200px; }
+
+.NW1 { background-position: -700px -0px; }
+.NW2 { background-position: -700px -100px; }
+.NW3 { background-position: -700px -200px; }
+
+.SW1 { background-position: -300px -0px; }
+.SW2 { background-position: -300px -100px; }
+.SW3 { background-position: -300px -200px; }
+
+.E1 { background-position: -500px -0px; transform: scaleX(-1); }
+.E2 { background-position: -500px -100px; transform: scaleX(-1); }
+.E3 { background-position: -500px -200px; transform: scaleX(-1); }
+
+.NE1 { background-position: -700px -0px; transform: scaleX(-1); }
+.NE2 { background-position: -700px -100px; transform: scaleX(-1); }
+.NE3 { background-position: -700px -200px; transform: scaleX(-1); }
+
+.SE1 { background-position: -300px -0px; transform: scaleX(-1); }
+.SE2 { background-position: -300px -100px; transform: scaleX(-1); }
+.SE3 { background-position: -300px -200px; transform: scaleX(-1); }
+
+.SSE1 { background-position: -200px -0px; transform: scaleX(-1); }
+.SSE2 { background-position: -200px -100px; transform: scaleX(-1); }
+.SSE3 { background-position: -200px -200px; transform: scaleX(-1); }
+
+#player {
+  position: absolute;
+  width: 100px;
+  height: 100px;
+  background-image: url('spritesheet.png');
+  background-repeat: no-repeat;
+  z-index: 1;
+}
+
+.remotePlayer {
+  z-index: 1;
+  position: absolute;
+  width: 100px;
+  height: 100px;
+  background-image: url('spritesheet.png');
+  background-repeat: no-repeat;
+}
+
+#joystick { position: absolute; left: 10px; bottom: 10px; width: 120px; height: 120px; pointer-events: none; }
+#joystick-indicator { width: 40px; height: 40px; border-radius: 50%; background: rgba(255,255,255,0.05); margin: 40px; }
