@@ -1,0 +1,31 @@
+/* Copyright and author note:
+   Written and created by Thomas John-Michael de Beer
+   (contact: tjdebeer@gmail.com) */
+
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no, maximum-scale=1, minimum-scale=1" />
+  <title>Ponder</title>
+  <link rel="stylesheet" href="1.css">
+</head>
+<body>
+  <div id="game-map">
+    <div id="player" class="idle1"></div>
+
+    <svg id="attack-visualizer" width="2000" height="2000" xmlns="http://www.w3.org/2000/svg" style="position:absolute; top:0; left:0; pointer-events:none;"></svg>
+
+    <div id="joystick">
+      <div id="joystick-indicator"></div>
+    </div>
+
+    <svg id="obstacle-svg" width="2000" height="2000" xmlns="http://www.w3.org/2000/svg">
+      <path id="obstacle-path" d="M500,500 H1500 V1500 H500 Z" fill="none" stroke="transparent" stroke-width="1" />
+    </svg>
+  </div>
+
+  <script src="https://unpkg.com/peerjs@latest/dist/peerjs.min.js"></script>
+  <script src="1.js"></script>
+</body>
+</html>
