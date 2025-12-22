@@ -265,192 +265,295 @@ function updateRemotePlayerPosition(data) {
   updateRemotePlayerSprite(rp, vx, vy);
 }
 
+
+/* ============================
+   Peer initialization and connection handling
+   ============================ */
+
 let peer = null;
+let peeridno = 0;
 const maxConnections = 3;
 const connections = new Map();
 let isConnected = false;
 const pendingConnections = new Set();
 const knownPeers = new Set();
-const GROUP_SIZE = 4;
-const lobbyChannel = new BroadcastChannel("ponder-lobby");
-const assignedGroupOf = new Map();
+
+let lastBroadcastTime = 0;
+const broadcastInterval = 69;
+
 let inGroup = false;
 let currentGroupId = null;
 const groupMembers = new Set();
-function shouldKeepConnection(localId, remoteId) { return localId < remoteId; }
 
-function dropRemotePlayer(id) {
-  if (!id) return;
-  const rp = remotePlayers[id];
-  if (rp) {
-    try { if (rp.element && rp.element.parentNode) rp.element.parentNode.removeChild(rp.element); } catch (e) {}
-    delete remotePlayers[id];
+let sweepIntervalId = null;
+const SWEEP_MAX_ATTEMPTS = 50;
+const SWEEP_DELAY_MS = 200;
+const TARGET_RETRY_BASE_MS = 2000;
+const TARGET_RETRY_MAX_MS = 60000;
+const PENDING_CAP = 3;
+const failedTargets = new Map();
+
+function shouldKeepConnection(localId, remoteId) {
+  return localId < remoteId;
+}
+
+function recordFailedTarget(targetId) {
+  const entry = failedTargets.get(targetId) || { attempts: 0, last: 0 };
+  entry.attempts = Math.min(10, entry.attempts + 1);
+  entry.last = Date.now();
+  failedTargets.set(targetId, entry);
+}
+function clearFailedTarget(targetId) {
+  failedTargets.delete(targetId);
+}
+function canAttemptTarget(targetId) {
+  const entry = failedTargets.get(targetId);
+  if (!entry) return true;
+  const backoff = Math.min(TARGET_RETRY_MAX_MS, TARGET_RETRY_BASE_MS * Math.pow(2, Math.max(0, entry.attempts - 1)));
+  return (Date.now() - entry.last) > backoff;
+}
+
+function onConnectionOpened(peerId) {
+  try { markPeerAlive(peerId); } catch (e) {}
+  try { sendPositionImmediate(); } catch (e) {}
+  if (!inGroup) {
+    inGroup = true;
+    currentGroupId = `g:${peer.id}|${peerId}`;
+    groupMembers.clear();
+    groupMembers.add(peer.id);
+    groupMembers.add(peerId);
+    stopSweep();
   }
-  try { connections.delete(id); } catch (e) {}
-  try { knownPeers.delete(id); } catch (e) {}
-  try { lastPongAt.delete(id); } catch (e) {}
-  updatePlayerZIndex();
 }
 
-function pruneMissingRemotePlayers() {
-  const activeIds = new Set([...Array.from(connections.keys()), ...knownPeers]);
-  for (const id in remotePlayers) {
-    if (!activeIds.has(id) && id !== (peer && peer.id)) dropRemotePlayer(id);
-  }
+function stopSweep() {
+  if (!sweepIntervalId) return;
+  clearInterval(sweepIntervalId);
+  sweepIntervalId = null;
 }
 
-function announceToLobby() {
-  const payload = { type: 'announce', id: peer.id, groupId: inGroup ? currentGroupId : null };
-  try { lobbyChannel.postMessage(payload); } catch (e) {}
-}
-
-function broadcastGroupFormed(members, groupId) {
-  try { lobbyChannel.postMessage({ type: 'group-formed', groupId, members }); } catch (e) {}
-}
-
-lobbyChannel.onmessage = (ev) => {
-  const msg = ev.data;
-  if (!msg || typeof msg.type !== 'string') return;
-  if (msg.type === 'announce') {
-    if (typeof msg.id === 'string') {
-      if (msg.groupId) assignedGroupOf.set(msg.id, msg.groupId); else if (!assignedGroupOf.has(msg.id)) assignedGroupOf.set(msg.id, null);
-      if (!inGroup) attemptFormGroup();
-      if (!inGroup && (!assignedGroupOf.get(msg.id))) {
-        if (!connections.has(msg.id) && !pendingConnections.has(msg.id)) connectToPeerOnce(msg.id);
+function startSweep() {
+  if (!peer) return;
+  if (inGroup) return;
+  if (sweepIntervalId) return;
+  let attemptIndex = 0;
+  sweepIntervalId = setInterval(() => {
+    if (!peer) { stopSweep(); return; }
+    if (inGroup || connections.size >= maxConnections || attemptIndex > SWEEP_MAX_ATTEMPTS) { stopSweep(); return; }
+    const target = `ponderstatichost${attemptIndex}`;
+    if (target !== peer.id && !connections.has(target) && !pendingConnections.has(target) && canAttemptTarget(target)) {
+      if (pendingConnections.size < PENDING_CAP) {
+        if (shouldKeepConnection(peer.id, target)) {
+          connectToPeerOnce(target);
+        } else {
+          setTimeout(() => {
+            if (!connections.has(target) && !pendingConnections.has(target) && canAttemptTarget(target)) connectToPeerOnce(target);
+          }, 200 + Math.floor(Math.random() * 400));
+        }
       }
     }
-  } else if (msg.type === 'group-formed') {
-    if (!Array.isArray(msg.members) || !msg.groupId) return;
-    msg.members.forEach(id => assignedGroupOf.set(id, msg.groupId));
-    if (msg.members.includes(peer.id)) activateGroup(msg.members.slice(), msg.groupId);
-  }
-};
+    attemptIndex++;
+  }, SWEEP_DELAY_MS);
+}
 
-function makeGroupId(sortedArray) { return 'g:' + sortedArray.join('|'); }
+function sendPositionImmediate(targetConn) {
+  if (!peer) return;
+  const pos = { type: 'position', id: peer.id, x: player.positionX, y: player.positionY, ts: Date.now() };
+  if (targetConn) {
+    try { targetConn.send(pos); } catch (e) {}
+  } else {
+    connections.forEach(conn => { try { conn.send(pos); } catch (e) {} });
+  }
+  lastBroadcastTime = Date.now();
+}
+
+function sendImpulse(vx, vy, targetConn) {
+  if (!peer) return;
+  const msg = { type: 'impulse', from: peer.id, vx, vy, ts: Date.now() };
+  if (targetConn) {
+    try { targetConn.send(msg); } catch (e) {}
+  } else {
+    connections.forEach(conn => { try { conn.send(msg); } catch (e) {} });
+  }
+}
 
 function connectToPeerOnce(targetPeerId) {
-  if (!peer || !targetPeerId || targetPeerId === peer.id) return;
-  const assigned = assignedGroupOf.get(targetPeerId);
-  if (assigned && (!inGroup || assigned !== currentGroupId)) return;
+  if (!peer || !targetPeerId) return;
+  if (targetPeerId === peer.id) return;
   if (connections.has(targetPeerId) || pendingConnections.has(targetPeerId)) return;
+  if (!canAttemptTarget(targetPeerId)) return;
+  if (inGroup) return;
+  if (pendingConnections.size >= PENDING_CAP) return;
+
   pendingConnections.add(targetPeerId);
   const conn = peer.connect(targetPeerId);
+
   conn.on('open', () => {
     pendingConnections.delete(targetPeerId);
-    const nowAssigned = assignedGroupOf.get(targetPeerId);
-    if (nowAssigned && (!inGroup || nowAssigned !== currentGroupId)) {
-      try { conn.close(); } catch (e) {}
-      return;
+    clearFailedTarget(targetPeerId);
+
+    if (!connections.has(targetPeerId)) {
+      connections.set(targetPeerId, conn);
+      knownPeers.add(targetPeerId);
+      isConnected = true;
+      onConnectionOpened(targetPeerId);
+      try { conn.send({ type: 'peers-snapshot', from: peer.id, peers: Array.from(knownPeers).concat(peer.id), groupId: inGroup ? currentGroupId : null }); } catch (e) {}
+      propagateConnections();
+    } else {
+      if (!shouldKeepConnection(peer.id, targetPeerId)) {
+        try { conn.close(); } catch (e) {}
+        return;
+      } else {
+        const old = connections.get(targetPeerId);
+        try { if (old && old !== conn) old.close(); } catch (e) {}
+        connections.set(targetPeerId, conn);
+        knownPeers.add(targetPeerId);
+        onConnectionOpened(targetPeerId);
+        try { conn.send({ type: 'peers-snapshot', from: peer.id, peers: Array.from(knownPeers).concat(peer.id), groupId: inGroup ? currentGroupId : null }); } catch (e) {}
+        propagateConnections();
+      }
     }
-    connections.set(targetPeerId, conn);
-    knownPeers.add(targetPeerId);
-    isConnected = true;
-    onConnectionOpened(targetPeerId);
-    propagateConnections();
+
+    if (connections.size > 0 && !inGroup) {
+      inGroup = true;
+      currentGroupId = `g:${peer.id}|${targetPeerId}`;
+      groupMembers.clear();
+      groupMembers.add(peer.id);
+      groupMembers.add(targetPeerId);
+      stopSweep();
+    }
+
+    sendPositionImmediate(conn);
+    sendPositionImmediate();
   });
+
   conn.on('data', (data) => handleIncomingData(data, conn));
-  conn.on('close', () => handleDisconnect(targetPeerId));
-  conn.on('error', () => handleDisconnect(targetPeerId));
-}
 
-function handleDisconnect(peerId) {
-  pendingConnections.delete(peerId);
-  connections.delete(peerId);
-  knownPeers.delete(peerId);
-  groupMembers.delete(peerId);
-  dropRemotePlayer(peerId);
-  propagateConnections();
-  pruneMissingRemotePlayers();
-}
-
-function attemptFormGroup() {
-  if (inGroup) return;
-  const candidates = new Set();
-  assignedGroupOf.forEach((g, id) => { if (!g) candidates.add(id); });
-  knownPeers.forEach(id => { if (!assignedGroupOf.get(id)) candidates.add(id); });
-  connections.forEach((_, id) => { if (!assignedGroupOf.get(id)) candidates.add(id); });
-  if (!assignedGroupOf.has(peer.id) || assignedGroupOf.get(peer.id) === null) candidates.add(peer.id);
-  const sorted = Array.from(candidates).sort();
-  if (sorted.length < GROUP_SIZE) return;
-  for (let i = 0; i <= sorted.length - GROUP_SIZE; i += GROUP_SIZE) {
-    const slice = sorted.slice(i, i + GROUP_SIZE);
-    if (!slice.includes(peer.id)) continue;
-    let anyAssigned = false;
-    for (const id of slice) {
-      const g = assignedGroupOf.get(id);
-      if (g && g !== null) { anyAssigned = true; break; }
-    }
-    if (anyAssigned) continue;
-    const groupId = makeGroupId(slice.slice().sort());
-    slice.forEach(id => assignedGroupOf.set(id, groupId));
-    broadcastGroupFormed(slice, groupId);
-    activateGroup(slice, groupId);
-    return;
-  }
-}
-
-function handleGroupFormedMessage(msg) {
-  const members = Array.isArray(msg.members) ? msg.members : [];
-  if (members.length !== GROUP_SIZE) return;
-  if (!members.includes(peer.id)) return;
-  const groupId = msg.groupId || makeGroupId(members.slice().sort());
-  activateGroup(members, groupId);
-}
-
-function activateGroup(memberArray, groupId) {
-  inGroup = true;
-  currentGroupId = groupId;
-  groupMembers.clear();
-  memberArray.forEach(id => groupMembers.add(id));
-  memberArray.forEach(id => assignedGroupOf.set(id, groupId));
-  announceToLobby();
-  connections.forEach((conn, id) => {
-    if (!groupMembers.has(id)) {
-      try { conn.close(); } catch (e) {}
-      connections.delete(id);
-    }
+  conn.on('close', () => {
+    pendingConnections.delete(targetPeerId);
+    connections.delete(targetPeerId);
+    knownPeers.delete(targetPeerId);
+    try { dropRemotePlayer(targetPeerId); } catch (e) {}
+    try { propagateConnections(); } catch (e) {}
+    try { pruneMissingRemotePlayers(); } catch (e) {}
+    if (!inGroup && connections.size < maxConnections) startSweep();
   });
-  memberArray.forEach(id => {
-    if (id === peer.id) return;
-    if (!connections.has(id) && !pendingConnections.has(id)) connectToPeerOnce(id);
-  });
-  propagateConnections();
-}
 
-function acceptIncomingConnection(conn) {
-  const remote = conn.peer;
-  if (inGroup && !groupMembers.has(remote)) { try { conn.close(); } catch (e) {} return false; }
-  const remoteAssigned = assignedGroupOf.get(remote);
-  if (remoteAssigned && remoteAssigned !== currentGroupId) { try { conn.close(); } catch (e) {} return false; }
-  return true;
+  conn.on('error', () => {
+    pendingConnections.delete(targetPeerId);
+    connections.delete(targetPeerId);
+    knownPeers.delete(targetPeerId);
+    try { dropRemotePlayer(targetPeerId); } catch (e) {}
+    try { propagateConnections(); } catch (e) {}
+    try { pruneMissingRemotePlayers(); } catch (e) {}
+    recordFailedTarget(targetPeerId);
+    if (!inGroup && connections.size < maxConnections) startSweep();
+  });
+
+  return conn;
 }
 
 function propagateConnections() {
-  const snapshot = Array.from(new Set([ ...connections.keys(), ...knownPeers, peer.id ]));
+  const snapshot = Array.from(new Set([ ...Array.from(connections.keys()), ...knownPeers, peer.id ]));
   connections.forEach(conn => {
     try { conn.send({ type: 'peers-snapshot', from: peer.id, peers: snapshot, groupId: inGroup ? currentGroupId : null }); } catch (e) {}
   });
-  pruneMissingRemotePlayers();
+  try { pruneMissingRemotePlayers(); } catch (e) {}
 }
 
 function handleIncomingData(data, conn) {
   if (!data || !data.type) return;
+
+  if (typeof data.groupId === 'string' && data.groupId) {
+    inGroup = true;
+    currentGroupId = data.groupId;
+    if (Array.isArray(data.members)) {
+      groupMembers.clear();
+      data.members.forEach(m => groupMembers.add(m));
+    } else {
+      const sender = data.from || (conn && conn.peer);
+      if (sender) groupMembers.add(sender);
+    }
+    stopSweep();
+  }
+
   if (data.type === 'peers-snapshot') {
     const sender = data.from || (conn && conn.peer);
-    if (sender && typeof data.groupId === 'string') assignedGroupOf.set(sender, data.groupId);
+    if (sender) {
+      knownPeers.add(sender);
+      if (!connections.has(sender)) {
+        if (conn && conn.peer === sender) {
+          connections.set(sender, conn);
+          knownPeers.add(sender);
+          isConnected = true;
+          onConnectionOpened(sender);
+        }
+      }
+    }
+
     if (Array.isArray(data.peers)) {
       data.peers.forEach(pId => {
         if (!pId || pId === peer.id) return;
-        if (!assignedGroupOf.has(pId)) assignedGroupOf.set(pId, null);
-        const assigned = assignedGroupOf.get(pId);
-        if (assigned && (!inGroup || assigned !== currentGroupId)) return;
-        if (!connections.has(pId) && !pendingConnections.has(pId)) connectToPeerOnce(pId);
+        knownPeers.add(pId);
+        if (connections.has(pId) || pendingConnections.has(pId)) return;
+        if (!canAttemptTarget(pId)) return;
+        if (inGroup) return;
+        if (shouldKeepConnection(peer.id, pId)) {
+          connectToPeerOnce(pId);
+        } else {
+          setTimeout(() => {
+            if (!connections.has(pId) && !pendingConnections.has(pId) && canAttemptTarget(pId) && !inGroup) connectToPeerOnce(pId);
+          }, 800 + Math.floor(Math.random() * 400));
+        }
       });
     }
-    if (sender && !knownPeers.has(sender)) knownPeers.add(sender);
-    if (!inGroup) attemptFormGroup();
+
+    try { conn.send({ type: 'peers-snapshot', from: peer.id, peers: Array.from(new Set([ ...Array.from(connections.keys()), ...knownPeers, peer.id ])), groupId: inGroup ? currentGroupId : null }); } catch (e) {}
+    try { pruneMissingRemotePlayers(); } catch (e) {}
+
+  } else if (data.type === 'initial-connections' || data.type === 'connect-to-others') {
+    const arr = data.data || data.peers;
+    if (Array.isArray(arr)) {
+      arr.forEach(pId => {
+        if (!pId || pId === peer.id) return;
+        knownPeers.add(pId);
+        if (!connections.has(pId) && !pendingConnections.has(pId) && canAttemptTarget(pId) && !inGroup) {
+          if (shouldKeepConnection(peer.id, pId)) {
+            connectToPeerOnce(pId);
+          } else {
+            setTimeout(() => {
+              if (!connections.has(pId) && !pendingConnections.has(pId) && canAttemptTarget(pId) && !inGroup) connectToPeerOnce(pId);
+            }, 800 + Math.floor(Math.random() * 400));
+          }
+        }
+      });
+    }
+
+  } else if (data.type === 'group-formed') {
+    if (Array.isArray(data.members) && data.groupId) {
+      inGroup = true;
+      currentGroupId = data.groupId;
+      groupMembers.clear();
+      data.members.forEach(id => groupMembers.add(id));
+      stopSweep();
+    }
+
   } else if (data.type === 'position') {
-    updateRemotePlayerPosition(data);
+    try { updateRemotePlayerPosition(data); } catch (e) {}
+  } else if (data.type === 'impulse') {
+    const from = data.from;
+    const vx = data.vx || 0;
+    const vy = data.vy || 0;
+    if (from && remotePlayers[from]) {
+      const rp = remotePlayers[from];
+      rp.velocityX = (rp.velocityX || 0) + vx;
+      rp.velocityY = (rp.velocityY || 0) + vy;
+      try { updateRemotePlayerSprite(rp, rp.velocityX, rp.velocityY); } catch (e) {}
+    } else if (from && from === peer.id) {
+      player.velocityX += vx;
+      player.velocityY += vy;
+      player.forceBroadcast = true;
+    }
   } else if (data.type === 'ping') {
     const sender = data.from || (conn && conn.peer);
     if (sender) markPeerAlive(sender);
@@ -458,13 +561,7 @@ function handleIncomingData(data, conn) {
   } else if (data.type === 'pong') {
     const sender = data.from || (conn && conn.peer);
     if (sender) markPeerAlive(sender);
-  } else if (data.type === 'group-formed') {
-    if (Array.isArray(data.members) && data.groupId) {
-      data.members.forEach(id => assignedGroupOf.set(id, data.groupId));
-      if (data.members.includes(peer.id)) activateGroup(data.members.slice(), data.groupId);
-    }
   } else if (data.type === 'hit') {
-    console.log(`You've been hit by ${data.from}!`);
     if (typeof data.attackerX === 'number' && typeof data.attackerY === 'number') {
       const dx = player.positionX - data.attackerX;
       const dy = player.positionY - data.attackerY;
@@ -475,80 +572,97 @@ function handleIncomingData(data, conn) {
         const ny = dy / dist;
         player.velocityX += nx * kb;
         player.velocityY += ny * kb;
+        player.forceBroadcast = true;
+        sendImpulse(nx * kb, ny * kb);
       }
     }
   }
 }
 
-let lastBroadcastTime = 0;
-const broadcastInterval = 69;
 function broadcastPosition() {
   const now = Date.now();
+  if (!peer) return;
   if (isConnected && (now - lastBroadcastTime > broadcastInterval)) {
-    const pos = { type: 'position', id: peer.id, x: player.positionX, y: player.positionY };
+    const pos = { type: 'position', id: peer.id, x: player.positionX, y: player.positionY, ts: Date.now() };
     connections.forEach(conn => { try { conn.send(pos); } catch (e) {} });
     lastBroadcastTime = now;
   }
 }
 
-const lastPongAt = new Map();
-const PING_INTERVAL_MS = 3000;
-const PRUNE_THRESHOLD_MS = 3000;
-function safeSendPing(conn) { try { conn.send({ type: 'ping', from: peer.id, ts: Date.now() }); } catch (e) {} }
-function safeSendPong(conn) { try { conn.send({ type: 'pong', from: peer.id, ts: Date.now() }); } catch (e) {} }
-function markPeerAlive(peerId) { lastPongAt.set(peerId, Date.now()); }
-function onConnectionOpened(peerId) { markPeerAlive(peerId); }
-
-const keepaliveInterval = setInterval(() => {
-  const now = Date.now();
-  connections.forEach((conn, id) => {
-    if (!conn) return;
-    try { if (typeof conn.open === 'boolean' ? conn.open : true) { safeSendPing(conn); } } catch (e) {}
-  });
-  for (const [peerId, tp] of lastPongAt.entries()) {
-    if (!connections.has(peerId)) { lastPongAt.delete(peerId); continue; }
-    if (now - tp > PRUNE_THRESHOLD_MS) {
-      try { const conn = connections.get(peerId); if (conn) try { conn.close(); } catch (e) {} } catch (e) {}
-      try { connections.delete(peerId); } catch (e) {}
-      try { knownPeers.delete(peerId); } catch (e) {}
-      dropRemotePlayer(peerId);
-      lastPongAt.delete(peerId);
-      propagateConnections();
-      pruneMissingRemotePlayers();
-    }
-  }
-}, PING_INTERVAL_MS);
-
-window.addEventListener('beforeunload', () => { try { clearInterval(keepaliveInterval); } catch (e) {} });
-
-function updateRemotePlayerSprite(remotePlayer, vx, vy) {
-  if (!remotePlayer) return;
-  if (Math.abs(vx) < 0.1 && Math.abs(vy) < 0.1) { remotePlayer.velocityX = 0; remotePlayer.velocityY = 0; } else { remotePlayer.velocityX = vx; remotePlayer.velocityY = vy; }
-  spriteController.updateSprite(remotePlayer);
-}
-
 function initializePeer() {
-  peer = new Peer(undefined, { debug: 2 });
-  peer.on('open', (id) => { console.log(`Peer started with ID: ${id}`); announceToLobby(); });
+  const peerId = `ponderstatichost${peeridno}`;
+  peer = new Peer(peerId, { debug: 2 });
+
+  peer.on('open', () => {
+    startSweep();
+  });
+
   peer.on('connection', (conn) => {
-    if (conn.peer === peer.id || connections.has(conn.peer)) return;
-    if (!acceptIncomingConnection(conn)) return;
+    if (conn.peer === peer.id || connections.size >= maxConnections) {
+      try { conn.close(); } catch (e) {}
+      return;
+    }
+
     conn.on('open', () => {
-      if (!acceptIncomingConnection(conn)) return;
-      connections.set(conn.peer, conn);
+      if (connections.has(conn.peer)) {
+        if (!shouldKeepConnection(peer.id, conn.peer)) {
+          const existing = connections.get(conn.peer);
+          try { if (existing && existing !== conn) existing.close(); } catch (e) {}
+          connections.set(conn.peer, conn);
+        } else {
+          try { conn.close(); } catch (e) {}
+          return;
+        }
+      } else {
+        connections.set(conn.peer, conn);
+      }
+
       knownPeers.add(conn.peer);
       isConnected = true;
       onConnectionOpened(conn.peer);
+
+      if (connections.size >= maxConnections) stopSweep();
+
+      try { conn.send({ type: 'peers-snapshot', from: peer.id, peers: Array.from(new Set([ ...Array.from(connections.keys()), ...knownPeers, peer.id ])), groupId: inGroup ? currentGroupId : null }); } catch (e) {}
       propagateConnections();
+
+      sendPositionImmediate(conn);
+      sendPositionImmediate();
     });
+
     conn.on('data', (data) => handleIncomingData(data, conn));
-    conn.on('close', () => handleDisconnect(conn.peer));
-    conn.on('error', () => handleDisconnect(conn.peer));
+    conn.on('close', () => {
+      connections.delete(conn.peer);
+      knownPeers.delete(conn.peer);
+      try { dropRemotePlayer(conn.peer); } catch (e) {}
+      try { propagateConnections(); } catch (e) {}
+      try { pruneMissingRemotePlayers(); } catch (e) {}
+      if (!inGroup && connections.size < maxConnections) startSweep();
+    });
+    conn.on('error', () => {
+      connections.delete(conn.peer);
+      knownPeers.delete(conn.peer);
+      try { dropRemotePlayer(conn.peer); } catch (e) {}
+      try { propagateConnections(); } catch (e) {}
+      try { pruneMissingRemotePlayers(); } catch (e) {}
+      if (!inGroup && connections.size < maxConnections) startSweep();
+    });
   });
-  peer.on('error', (err) => { console.error('Peer error:', err); });
+
+  peer.on('error', (err) => {
+    if (err && err.type === 'unavailable-id') {
+      peeridno++;
+      setTimeout(() => initializePeer(), 50 + Math.floor(Math.random() * 200));
+    } else {
+      console.error('Peer error', err);
+    }
+  });
 }
 
 initializePeer();
+
+
+
 
 function updateGame() {
   inputController.updateVelocity();
