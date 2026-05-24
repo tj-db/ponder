@@ -1,774 +1,569 @@
-<!DOCTYPE html>
-<!-- Legal Footnote: This content is subject to copyright and should not be reproduced without permission. -->
-<!-- Written and created by Thomas John-Michael de Beer, feel free to contact me via tjdebeer@gmail.com  -->
+<!doctype html>
+<!-- Copyright and author note:
+     Written and created by Thomas John-Michael de Beer
+     (contact: tjdebeer@gmail.com) -->
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no, maximum-scale=1, minimum-scale=1">
-    <title>ponder</title>
-    <style>
-        * {
-            user-select: none;
-            -webkit-user-select: none;
-            -ms-user-select: none;
-        }
-        
-        body, html {
-            margin: 0;
-            padding: 0;
-            height: 100%;
-            overflow: hidden;
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            background-color: black;
-        }
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no, maximum-scale=1, minimum-scale=1" />
+  <title>Ponder</title>
+  <style>
+    * {
+      user-select: none;
+      -webkit-user-select: none;
+      -ms-user-select: none;
+    }
 
-        #game-map {
-            position: absolute;
-            width: 2000px;
-            height: 2000px;
-            background-image: url('level3.webp');
-            background-size: 1000px 1000px;
-            background-position: center;
-            background-repeat: no-repeat;
-        }
+    html, body {
+      margin: 0;
+      padding: 0;
+      height: 100%;
+      overflow: hidden;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      background-color: black;
+    }
 
-.flipped {
-    transform: scaleX(-1);
-}
+    #game-map {
+      position: absolute;
+      width: 2000px;
+      height: 2000px;
+      background-image: url('level3.webp');
+      background-size: 1000px 1000px;
+      background-position: center;
+      background-repeat: no-repeat;
+    }
 
+    .flipped { transform: scaleX(-1); }
 
-.N1 { background-position: -900px -0px; }
-.N2 { background-position: -900px -100px; }
-.N3 { background-position: -900px -200px; }
+    .N1 { background-position: -700px -0px; transform: scaleX(-1); }
+    .N2 { background-position: -700px -100px; transform: scaleX(-1); }
+    .N3 { background-position: -700px -200px; transform: scaleX(-1); }
 
-.S1 { background-position: -100px -0px; }
-.S2 { background-position: -100px -100px; }
-.S3 { background-position: -100px -200px; }
+    .S1 { background-position: -300px -0px; }
+    .S2 { background-position: -300px -100px; }
+    .S3 { background-position: -300px -200px; }
 
-.idle1 { background-position: -0px -0px; }
-.idle2 { background-position: -0px -100px; }
-.idle3 { background-position: -0px -200px; }
+    .idle1 { background-position: -0px -0px; }
+    .idle2 { background-position: -0px -100px; }
+    .idle3 { background-position: -0px -200px; }
 
+    .W1 { background-position: -500px -0px; }
+    .W2 { background-position: -500px -100px; }
+    .W3 { background-position: -500px -200px; }
 
-.W1 { background-position: -500px -0px; }
-.W2 { background-position: -500px -100px; }
-.W3 { background-position: -500px -200px; }
+    .NW1 { background-position: -700px -0px; }
+    .NW2 { background-position: -700px -100px; }
+    .NW3 { background-position: -700px -200px; }
 
-.NWW1 { background-position: -600px -0px; }
-.NWW2 { background-position: -600px -100px; }
-.NWW3 { background-position: -600px -200px; }
+    .SW1 { background-position: -300px -0px; }
+    .SW2 { background-position: -300px -100px; }
+    .SW3 { background-position: -300px -200px; }
 
-.NW1 { background-position: -700px -0px; }
-.NW2 { background-position: -700px -100px; }
-.NW3 { background-position: -700px -200px; }
+    .E1 { background-position: -500px -0px; transform: scaleX(-1); }
+    .E2 { background-position: -500px -100px; transform: scaleX(-1); }
+    .E3 { background-position: -500px -200px; transform: scaleX(-1); }
 
-.NNW1 { background-position: -800px -0px; }
-.NNW2 { background-position: -800px -100px; }
-.NNW3 { background-position: -800px -200px; }
+    .NE1 { background-position: -700px -0px; transform: scaleX(-1); }
+    .NE2 { background-position: -700px -100px; transform: scaleX(-1); }
+    .NE3 { background-position: -700px -200px; transform: scaleX(-1); }
 
-.SWW1 { background-position: -400px -0px; }
-.SWW2 { background-position: -400px -100px; }
-.SWW3 { background-position: -400px -200px; }
+    .SE1 { background-position: -300px -0px; transform: scaleX(-1); }
+    .SE2 { background-position: -300px -100px; transform: scaleX(-1); }
+    .SE3 { background-position: -300px -200px; transform: scaleX(-1); }
 
-.SW1 { background-position: -300px -0px; }
-.SW2 { background-position: -300px -100px; }
-.SW3 { background-position: -300px -200px; }
+    .SSE1 { background-position: -200px -0px; transform: scaleX(-1); }
+    .SSE2 { background-position: -200px -100px; transform: scaleX(-1); }
+    .SSE3 { background-position: -200px -200px; transform: scaleX(-1); }
 
-.SSW1 { background-position: -200px -0px; }
-.SSW2 { background-position: -200px -100px; }
-.SSW3 { background-position: -200px -200px; }
+    #player {
+      position: absolute;
+      width: 100px;
+      height: 100px;
+      background-image: url('spritesheet.png');
+      background-repeat: no-repeat;
+      z-index: 1;
+    }
 
+    .remotePlayer {
+      z-index: 1;
+      position: absolute;
+      width: 100px;
+      height: 100px;
+      background-image: url('spritesheet.png');
+      background-repeat: no-repeat;
+    }
 
-.E1 { background-position: -500px -0px; transform: scaleX(-1); }
-.E2 { background-position: -500px -100px; transform: scaleX(-1); }
-.E3 { background-position: -500px -200px; transform: scaleX(-1); }
-
-.NE1 { background-position: -700px -0px; transform: scaleX(-1); }
-.NE2 { background-position: -700px -100px; transform: scaleX(-1); }
-.NE3 { background-position: -700px -200px; transform: scaleX(-1); }
-
-.NNE1 { background-position: -800px -0px; transform: scaleX(-1); }
-.NNE2 { background-position: -800px -100px; transform: scaleX(-1); }
-.NNE3 { background-position: -800px -200px; transform: scaleX(-1); }
-
-.NEE1 { background-position: -600px -0px; transform: scaleX(-1); }
-.NEE2 { background-position: -600px -100px; transform: scaleX(-1); }
-.NEE3 { background-position: -600px -200px; transform: scaleX(-1); }
-
-.SEE1 { background-position: -400px -0px; transform: scaleX(-1); }
-.SEE2 { background-position: -400px -100px; transform: scaleX(-1); }
-.SEE3 { background-position: -400px -200px; transform: scaleX(-1); }
-
-
-.SE1 { background-position: -300px -0px; transform: scaleX(-1); }
-.SE2 { background-position: -300px -100px; transform: scaleX(-1); }
-.SE3 { background-position: -300px -200px; transform: scaleX(-1); }
-
-
-.SSE1 { background-position: -200px -0px; transform: scaleX(-1); }
-.SSE2 { background-position: -200px -100px; transform: scaleX(-1); }
-.SSE3 { background-position: -200px -200px; transform: scaleX(-1); }
-
-
-        #player {
-            position: absolute;
-            width: 100px;
-            height: 100px;
-            background-image: url('spritesheet.png');
-            background-repeat: no-repeat;
-            z-index: 1;
-        }
-       
-        .remotePlayer {
-            z-index: 1;
-        }
-
-    </style>
+    #joystick { position: absolute; left: 10px; bottom: 10px; width: 120px; height: 120px; pointer-events: none; }
+    #joystick-indicator { width: 40px; height: 40px; border-radius: 50%; background: rgba(255,255,255,0.05); margin: 40px; }
+  </style>
 </head>
 <body>
+  <div id="game-map">
+    <div id="player" class="idle1"></div>
 
-
-    <div id="game-map">
-        <div id="player" class="idle1"></div>
+    <svg id="attack-visualizer" width="2000" height="2000" xmlns="http://www.w3.org/2000/svg" style="position:absolute; top:0; left:0; pointer-events:none;"></svg>
 
     <div id="joystick">
-        <div id="joystick-indicator"></div>
+      <div id="joystick-indicator"></div>
     </div>
 
-<svg id="obstacle-svg" width="2000" height="2000" xmlns="http://www.w3.org/2000/svg">
-    <path id="obstacle-path" 
-          d="M1500,1334.93V1500H500V1362.1l313.82-6.79V1335.9l23.29-1.94v-37.85h58.23l1-35.9,74.72-1.94-1-38.82h21.35l-1-33h29.11l-1-25.23,29.11,1.94-1-30.09,21.35,2-2.91-40.76-29.12-3.88L911.83,967.15l-87.33-67-87.34-57.26-82.48-36.87,209.6-7.76L1005,892.43l126.15,108.68,49.49,46.58,7.77,4.85-6.79,1.94,2.91,34.94,78.6,132.94-1,44.64-34-1.94v34l-47.55-1,2.92,55.32,45.6,1Z" 
-          fill="none" 
-          stroke="transparent" 
-          stroke-width="1" />
-</svg>
+    <svg id="obstacle-svg" width="2000" height="2000" xmlns="http://www.w3.org/2000/svg">
+      <path id="obstacle-path" d="M500,500 H1500 V1500 H500 Z" fill="none" stroke="transparent" stroke-width="1" />
+    </svg>
+  </div>
 
-    </div>
+  <script src="https://unpkg.com/peerjs@latest/dist/peerjs.min.js"></script>
+  <script>
+    /* Written and created by Thomas John-Michael de Beer (contact: tjdebeer@gmail.com) */
 
-    <script src="https://unpkg.com/peerjs@1.4.7/dist/peerjs.min.js"></script>
-    <script>
+    let player = {
+      element: document.getElementById('player'),
+      positionX: 1000,
+      positionY: 1000,
+      velocityX: 0,
+      velocityY: 0,
+      friction: 0.85,
+      maxVelocity: 6,
+      acceleration: 0.65,
+      spriteIndex: 1,
+      idleFrameTime: 0,
+      movingKeys: {}
+    };
 
+    const remotePlayers = {};
+    const monsters = {};
+    const gameMap = document.getElementById('game-map');
+    const playerElement = document.getElementById('player');
 
-
-
-        let player = {
-            element: document.getElementById('player'),
-            positionX: 1000,
-            positionY: 1000,
-            velocityX: 0,
-            velocityY: 0,
-            friction: 0.85,
-            maxVelocity: 6,
-            acceleration: 0.65,
-            spriteIndex: 1,
-            idleFrameTime: 0,
-            movingKeys: {}
-        };
-
-const remotePlayers = {};
-const monsters = {};
-
-        const gameMap = document.getElementById('game-map');
-        const playerElement = document.getElementById('player');
-
-
-
-// Z-INDEX
-
-function updatePlayerZIndex() {
-    const allPlayers = [];
-    
-    allPlayers.push({
-        element: playerElement,
-        y: player.positionY,
-        id: 'local'
-    });
-    
-    for (const id in remotePlayers) {
-        const remotePlayer = remotePlayers[id];
-        if (remotePlayer && remotePlayer.element) {
-            allPlayers.push({
-                element: remotePlayer.element,
-                y: remotePlayer.yPercent,
-                id: id
-            });
-        }
+    function updatePlayerZIndex() {
+      const allPlayers = [];
+      allPlayers.push({ element: playerElement, y: player.positionY, id: 'local' });
+      for (const id in remotePlayers) {
+        const rp = remotePlayers[id];
+        if (rp && rp.element) allPlayers.push({ element: rp.element, y: rp.yPercent, id });
+      }
+      allPlayers.sort((a, b) => a.y - b.y);
+      allPlayers.forEach((p, i) => { p.element.style.zIndex = i + 1; });
     }
-    
-    allPlayers.sort((a, b) => a.y - b.y);
-    
-    allPlayers.forEach((player, index) => {
-        player.element.style.zIndex = index + 1;
-    });
-}
 
-
-// COLLISIONS
-
-function checkPlayerCollisions() {
-    const playerRadius = 30;
-    
-    for (const id in remotePlayers) {
+    function checkPlayerCollisions() {
+      const playerRadius = 30;
+      for (const id in remotePlayers) {
         const remotePlayer = remotePlayers[id];
         if (!remotePlayer || !remotePlayer.element) continue;
-        
         const dx = player.positionX - remotePlayer.xPercent;
         const dy = player.positionY - remotePlayer.yPercent;
         const distance = Math.sqrt(dx * dx + dy * dy);
-        
         if (distance < playerRadius * 2) {
-            handlePlayerCollision(dx, dy, distance, playerRadius * 2);
+          handlePlayerCollision(dx, dy, distance, playerRadius * 2);
         }
+      }
     }
-}
 
-function handlePlayerCollision(dx, dy, distance, minDistance) {
-    if (distance === 0) return;
-    
-    const normalX = dx / distance;
-    const normalY = dy / distance;
-    
-    const overlap = minDistance - distance;
-    
-    const separationForce = overlap * 0.5;
-    player.positionX += normalX * separationForce;
-    player.positionY += normalY * separationForce;
-    
-    const relativeVelocityX = player.velocityX;
-    const relativeVelocityY = player.velocityY;
-    
-    const velocityAlongNormal = relativeVelocityX * normalX + relativeVelocityY * normalY;
-    
-    if (velocityAlongNormal > 0) return;
-    
-    const restitution = 0.3;
-    const impulse = -(1 + restitution) * velocityAlongNormal;
-    
-    player.velocityX += impulse * normalX;
-    player.velocityY += impulse * normalY;
-}
+    function handlePlayerCollision(dx, dy, distance, minDistance) {
+      if (distance === 0) return;
+      const normalX = dx / distance;
+      const normalY = dy / distance;
+      const overlap = minDistance - distance;
+      const separation = overlap * 0.5;
+      player.positionX += normalX * separation;
+      player.positionY += normalY * separation;
+      const relVx = player.velocityX;
+      const relVy = player.velocityY;
+      const velAlong = relVx * normalX + relVy * normalY;
+      if (velAlong > 0) return;
+      const restitution = 0.3;
+      const impulse = -(1 + restitution) * velAlong;
+      player.velocityX += impulse * normalX;
+      player.velocityY += impulse * normalY;
+    }
 
-
-function checkCollision() {
-    const playerX = player.positionX + playerElement.offsetWidth / 2;
-    const playerY = player.positionY + playerElement.offsetHeight / 2;
-    const playerRadius = 30;
-
-    const obstaclePath = document.getElementById('obstacle-path');
-    const pathLength = obstaclePath.getTotalLength();
-
-    let isIntersecting = false;
-    let closestPoint = null;
-    let closestDistance = Infinity;
-
-    for (let i = 0; i < pathLength; i++) {
+    function checkCollision() {
+      const playerX = player.positionX + playerElement.offsetWidth / 2;
+      const playerY = player.positionY + playerElement.offsetHeight / 2;
+      const playerRadius = 30;
+      const obstaclePath = document.getElementById('obstacle-path');
+      if (!obstaclePath) return;
+      const pathLength = obstaclePath.getTotalLength();
+      let isIntersecting = false;
+      let closestPoint = null;
+      let closestDistance = Infinity;
+      for (let i = 0; i < pathLength; i++) {
         const point = obstaclePath.getPointAtLength(i);
-        const distance = Math.sqrt(
-            Math.pow(point.x - playerX, 2) + Math.pow(point.y - playerY, 2)
-        );
-
-        if (distance <= playerRadius) {
-            isIntersecting = true;
-            if (distance < closestDistance) {
-                closestDistance = distance;
-                closestPoint = point;
-            }
+        const dist = Math.hypot(point.x - playerX, point.y - playerY);
+        if (dist <= playerRadius) {
+          isIntersecting = true;
+          if (dist < closestDistance) { closestDistance = dist; closestPoint = point; }
         }
+      }
+      if (isIntersecting && closestPoint) handleCollision(closestPoint);
     }
 
-    if (isIntersecting && closestPoint) {
-        handleCollision(closestPoint);
-    }
-}
-
-function handleCollision(closestPoint) {
-    const playerX = player.positionX + playerElement.offsetWidth / 2;
-    const playerY = player.positionY + playerElement.offsetHeight / 2;
-
-    const dx = closestPoint.x - playerX;
-    const dy = closestPoint.y - playerY;
-
-    const magnitude = Math.sqrt(dx * dx + dy * dy);
-    const unitDx = dx / magnitude;
-    const unitDy = dy / magnitude;
-
-    const playerRadius = 50;
-
-    const dotProduct = player.velocityX * unitDx + player.velocityY * unitDy;
-    if (dotProduct > 0) {
+    function handleCollision(closestPoint) {
+      const playerX = player.positionX + playerElement.offsetWidth / 2;
+      const playerY = player.positionY + playerElement.offsetHeight / 2;
+      const dx = closestPoint.x - playerX;
+      const dy = closestPoint.y - playerY;
+      const mag = Math.sqrt(dx * dx + dy * dy);
+      if (mag === 0) return;
+      const ux = dx / mag;
+      const uy = dy / mag;
+      const dot = player.velocityX * ux + player.velocityY * uy;
+      if (dot > 0) {
         const reflectFactor = 6.0;
-        player.velocityX -= dotProduct * unitDx * reflectFactor;
-        player.velocityY -= dotProduct * unitDy * reflectFactor;
+        player.velocityX -= dot * ux * reflectFactor;
+        player.velocityY -= dot * uy * reflectFactor;
+      }
     }
-}
 
+    window.addEventListener("gamepadconnected", (e) => { inputController.gamepadIndex = e.gamepad.index; console.log("Gamepad connected:", e.gamepad.id); });
+    window.addEventListener("gamepaddisconnected", () => { inputController.gamepadIndex = null; console.log("Gamepad disconnected"); });
 
-//  CONTROLS
-
-        
-window.addEventListener("gamepadconnected", (e) => {
-    inputController.gamepadIndex = e.gamepad.index;
-    console.log("Gamepad connected:", e.gamepad.id);
-});
-
-window.addEventListener("gamepaddisconnected", () => {
-    inputController.gamepadIndex = null;
-    console.log("Gamepad disconnected");
-});
-
-
-// INPUT CONTROLLER
-
-const inputController = {
-    gamepadIndex: null,
-    keys: { w: false, a: false, s: false, d: false }, 
-
-    updateVelocity: () => {
-
-        if (inputController.keys.w || player.movingKeys['ArrowUp']) {
-            player.velocityY -= player.acceleration;
-        }
-        if (inputController.keys.s || player.movingKeys['ArrowDown']) {
-            player.velocityY += player.acceleration;
-        }
-        if (inputController.keys.a || player.movingKeys['ArrowLeft']) {
-            player.velocityX -= player.acceleration;
-        }
-        if (inputController.keys.d || player.movingKeys['ArrowRight']) {
-            player.velocityX += player.acceleration;
-        }
-
+    const inputController = {
+      gamepadIndex: null,
+      keys: { w: false, a: false, s: false, d: false },
+      updateVelocity: () => {
+        if (inputController.keys.w || player.movingKeys['ArrowUp']) player.velocityY -= player.acceleration;
+        if (inputController.keys.s || player.movingKeys['ArrowDown']) player.velocityY += player.acceleration;
+        if (inputController.keys.a || player.movingKeys['ArrowLeft']) player.velocityX -= player.acceleration;
+        if (inputController.keys.d || player.movingKeys['ArrowRight']) player.velocityX += player.acceleration;
         if (inputController.gamepadIndex !== null) {
-            const gamepad = navigator.getGamepads()[inputController.gamepadIndex];
-            if (gamepad) {
-                const axisX = gamepad.axes[0];
-                const axisY = gamepad.axes[1];
-
-                if (Math.abs(axisX) > 0.1) {
-                    player.velocityX += axisX * player.acceleration;
-                }
-                if (Math.abs(axisY) > 0.1) {
-                    player.velocityY += axisY * player.acceleration;
-                }
-            }
+          const gp = navigator.getGamepads()[inputController.gamepadIndex];
+          if (gp) {
+            const ax = gp.axes[0];
+            const ay = gp.axes[1];
+            if (Math.abs(ax) > 0.1) player.velocityX += ax * player.acceleration;
+            if (Math.abs(ay) > 0.1) player.velocityY += ay * player.acceleration;
+          }
         }
-    }
-};
+      }
+    };
 
-//SPRITE CONTROLLER
-
-const spriteController = {
-    updateSprite: (character) => {
-
-        const { velocityX, velocityY } = character;
+    const spriteController = {
+      updateSprite: (character) => {
+        const { velocityX = 0, velocityY = 0 } = character;
         const direction = getDirection(velocityX, velocityY);
-
-        character.idleFrameTime += 1;
-
-        if (direction !== 'idle') {
-            if (character.idleFrameTime > 10) { 
-                if (character.spriteIndex === 1) {
-                    character.element.className = `${direction}1`;
-                    character.spriteIndex = 2;
-                } else if (character.spriteIndex === 2) {
-                    character.element.className = `${direction}2`;
-                    character.spriteIndex = 3;
-                } else {
-                    character.element.className = `${direction}3`;
-                    character.spriteIndex = 1;
-                }
-                character.idleFrameTime = 0;
-            }
-        } else {
-            if (character.idleFrameTime > 10) {
-                if (character.spriteIndex === 1) {
-                    character.element.className = 'idle1';
-                    character.spriteIndex = 2;
-                } else if (character.spriteIndex === 2) {
-                    character.element.className = 'idle2';
-                    character.spriteIndex = 3;
-                } else {
-                    character.element.className = 'idle3';
-                    character.spriteIndex = 1;
-                }
-                character.idleFrameTime = 0;
-            }
+        character.idleFrameTime = (character.idleFrameTime || 0) + 1;
+        if (character.idleFrameTime > 10) {
+          const frame = character.spriteIndex || 1;
+          if (character.element) character.element.className = `${direction}${frame}`;
+          character.spriteIndex = frame === 3 ? 1 : frame + 1;
+          character.idleFrameTime = 0;
         }
-    }
-};
+      }
+    };
 
-
-
-function getDirection(velocityX, velocityY) {
-    if (velocityX === 0 && velocityY === 0) return 'idle';
-
-    const angle = Math.atan2(-velocityY, velocityX) * (180 / Math.PI);
-    const normalizedAngle = (angle + 360) % 360;
-
-    const directions = [
-        'E', 'NEE', 'NE', 'NNE', 'N', 'NNW', 'NW', 'NWW', 
-        'W', 'SWW', 'SW', 'SSW', 'S', 'SSE', 'SE', 'SEE'
-    ];
-
-    const index = Math.floor((normalizedAngle + 11.25) / 22.5) % 16;
-
-    return directions[index];
-}
-
-
-
-// EVENT LISTENERS
-
-document.addEventListener('keydown', (event) => {
-    if (event.key === 'ArrowUp' || event.key === 'ArrowDown' || event.key === 'ArrowLeft' || event.key === 'ArrowRight') {
-        player.movingKeys[event.key] = true;
+    function getDirection(vx, vy) {
+      if (vx === 0 && vy === 0) return 'idle';
+      const angle = Math.atan2(-vy, vx) * (180 / Math.PI);
+      const normalized = (angle + 360) % 360;
+      const directions = ['E', 'NE', 'N', 'NW', 'W', 'SW', 'S', 'SE'];
+      const idx = Math.floor((normalized + 22.5) / 45) % 8;
+      return directions[idx];
     }
 
-    if (event.key === 'w' || event.key === 'a' || event.key === 's' || event.key === 'd') {
-        inputController.keys[event.key] = true;
+    document.addEventListener('keydown', (ev) => {
+      if (['ArrowUp','ArrowDown','ArrowLeft','ArrowRight'].includes(ev.key)) player.movingKeys[ev.key] = true;
+      if (['w','a','s','d'].includes(ev.key)) inputController.keys[ev.key] = true;
+      if (ev.code === 'Space') performAttack();
+    });
+
+    document.addEventListener('keyup', (ev) => {
+      if (['ArrowUp','ArrowDown','ArrowLeft','ArrowRight'].includes(ev.key)) player.movingKeys[ev.key] = false;
+      if (['w','a','s','d'].includes(ev.key)) inputController.keys[ev.key] = false;
+    });
+
+    function performAttack() {
+      const attackRadius = 244;
+      const playerCenterX = player.positionX + playerElement.offsetWidth / 2;
+      const playerCenterY = player.positionY + playerElement.offsetHeight / 2;
+      let direction = (player.velocityX === 0 && player.velocityY === 0) ? Math.PI / 2 : Math.atan2(player.velocityY, player.velocityX);
+      const dashStrength = 1111;
+      player.velocityX += Math.cos(direction) * dashStrength;
+      player.velocityY += Math.sin(direction) * dashStrength;
+      player.friction = 1.0;
+      setTimeout(() => { player.friction = 0.85; }, 111);
+
+      const visualizer = document.getElementById('attack-visualizer');
+      if (visualizer) {
+        visualizer.innerHTML = '';
+        const arcPath = describeArc(playerCenterX, playerCenterY, attackRadius, direction - Math.PI / 6, direction + Math.PI / 6);
+        const path = document.createElementNS("http://www.w3.org/2000/svg", "path");
+        path.setAttribute("d", arcPath);
+        path.setAttribute("fill", "rgba(255,0,0,0.3)");
+        path.setAttribute("stroke", "red");
+        path.setAttribute("stroke-width", "2");
+        visualizer.appendChild(path);
+        setTimeout(() => { visualizer.innerHTML = ''; }, 300);
+      }
+
+      for (const id in remotePlayers) {
+        const remote = remotePlayers[id];
+        if (!remote || !remote.element) continue;
+        const remoteX = remote.xPercent + 50;
+        const remoteY = remote.yPercent + 50;
+        const dx = remoteX - playerCenterX;
+        const dy = remoteY - playerCenterY;
+        const distance = Math.hypot(dx, dy);
+        if (distance <= attackRadius) {
+          const angleToRemote = Math.atan2(dy, dx);
+          let angleDiff = angleToRemote - direction;
+          angleDiff = Math.atan2(Math.sin(angleDiff), Math.cos(angleDiff));
+          if (Math.abs(angleDiff) <= Math.PI / 2) {
+            const conn = connections.get(id);
+            if (conn) {
+              try { conn.send({ type: 'hit', from: peer.id, attackerX: player.positionX, attackerY: player.positionY }); } catch (e) {}
+            }
+          }
+        }
+      }
     }
-});
 
-document.addEventListener('keyup', (event) => {
-    if (event.key === 'ArrowUp' || event.key === 'ArrowDown' || event.key === 'ArrowLeft' || event.key === 'ArrowRight') {
-        player.movingKeys[event.key] = false;
+    function polarToCartesian(cx, cy, r, angleRad) {
+      return { x: cx + r * Math.cos(angleRad), y: cy + r * Math.sin(angleRad) };
+    }
+    function describeArc(cx, cy, r, startAngleRad, endAngleRad) {
+      const start = polarToCartesian(cx, cy, r, endAngleRad);
+      const end = polarToCartesian(cx, cy, r, startAngleRad);
+      const largeArcFlag = endAngleRad - startAngleRad <= Math.PI ? "0" : "1";
+      return ["M " + cx + " " + cy, "L " + start.x + " " + start.y, "A " + r + " " + r + " 0 " + largeArcFlag + " 0 " + end.x + " " + end.y, "Z"].join(" ");
     }
 
-    if (event.key === 'w' || event.key === 'a' || event.key === 's' || event.key === 'd') {
-        inputController.keys[event.key] = false;
+    function createPlayer(id, isLocal) {
+      const playerDiv = document.createElement('div');
+      playerDiv.className = 'remotePlayer';
+      playerDiv.style.position = 'absolute';
+      playerDiv.style.width = '100px';
+      playerDiv.style.height = '100px';
+      playerDiv.style.backgroundImage = 'url("spritesheet.png")';
+      gameMap.appendChild(playerDiv);
+      return { id, element: playerDiv, positionX: 0, positionY: 0, targetX: 0, targetY: 0, xPercent: 0, yPercent: 0, spriteIndex: 1, idleFrameTime: 0, velocityX: 0, velocityY: 0 };
     }
-});
 
+    function updateRemotePlayerPositionOnScreen(remotePlayer) {
+      if (remotePlayer && remotePlayer.element) {
+        remotePlayer.element.style.left = `${remotePlayer.xPercent}px`;
+        remotePlayer.element.style.top = `${remotePlayer.yPercent}px`;
+      }
+    }
 
-   
-let peeridno = 0;
-let ExistingPeerIDs = 0;
-let peer = null;
-const maxConnections = 3;
-const connections = new Map();
-   let isConnected = false; 
+    function updateRemotePlayerSprite(remotePlayer, vx, vy) {
+      if (!remotePlayer) return;
+      if (Math.abs(vx) < 0.1 && Math.abs(vy) < 0.1) { remotePlayer.velocityX = 0; remotePlayer.velocityY = 0; } else { remotePlayer.velocityX = vx; remotePlayer.velocityY = vy; }
+      spriteController.updateSprite(remotePlayer);
+    }
 
-function initializePeer() {
-    const peerId = `ponderstatichost${peeridno}`;
-    peer = new Peer(peerId, { debug: 2 });
+    function interpolatePosition(remotePlayer, targetXPercent, targetYPercent) {
+      const f = 0.8;
+      const dx = targetXPercent - remotePlayer.xPercent;
+      const dy = targetYPercent - remotePlayer.yPercent;
+      remotePlayer.xPercent += dx * f;
+      remotePlayer.yPercent += dy * f;
+      const vx = dx * f;
+      const vy = dy * f;
+      updateRemotePlayerPositionOnScreen(remotePlayer);
+      updateRemotePlayerSprite(remotePlayer, vx, vy);
+    }
 
-peer.on('open', function (id) {
-    console.log(`Peer started with ID: ${id}`);
-    
-    let connectInterval = setInterval(function() {
+    function updateRemotePlayerPosition(data) {
+      if (!data || !data.id) return;
+      if (!remotePlayers[data.id]) remotePlayers[data.id] = createPlayer(data.id, false);
+      const rp = remotePlayers[data.id];
+      rp.targetXPercent = data.x;
+      rp.targetYPercent = data.y;
+      interpolatePosition(rp, rp.targetXPercent, rp.targetYPercent);
+      const vx = (rp.targetXPercent || rp.xPercent) - rp.xPercent;
+      const vy = (rp.targetYPercent || rp.yPercent) - rp.yPercent;
+      updateRemotePlayerSprite(rp, vx, vy);
+    }
 
-        tryToConnectToPeers(id);
-        ExistingPeerIDs++;
-        propagateConnections();
-        
-        if (connections.size > 0) {
+    /* ============================
+       Peer initialization and connection handling
+       ============================ */
+
+    let peeridno = 0;
+    let ExistingPeerIDs = 0;
+    let peer = null;
+    const maxConnections = 3;
+    const connections = new Map();
+    let isConnected = false;
+
+    function initializePeer() {
+      const peerId = `ponderstatichost${peeridno}`;
+      peer = new Peer(peerId, { debug: 2 });
+
+      peer.on('open', function (id) {
+        console.log(`Peer started with ID: ${id}`);
+        let connectInterval = setInterval(function() {
+          tryToConnectToPeers(id);
+          ExistingPeerIDs++;
+          propagateConnections();
+          if (connections.size > 0) {
             clearInterval(connectInterval);
-        }
-    }, 888);
-});
+          }
+        }, 888);
+      });
 
-    peer.on('connection', function (conn) {
+      peer.on('connection', function (conn) {
         if (conn.peer === peer.id || connections.has(conn.peer) || connections.size >= maxConnections) {
-            conn.close();
-            return;
+          conn.close();
+          return;
         }
-
         connections.set(conn.peer, conn);
         propagateConnections();
 
         conn.on('open', function () {
-       isConnected = true; 
-            conn.send({
-                type: 'initial-connections',
-                data: Array.from(connections.keys())
-            });
-            conn.send({
-                type: 'connect-to-others',
-                peers: Array.from(connections.keys())
-            });
+          isConnected = true;
+          conn.send({ type: 'initial-connections', data: Array.from(connections.keys()) });
+          conn.send({ type: 'connect-to-others', peers: Array.from(connections.keys()) });
         });
 
         conn.on('data', handleIncomingData);
         conn.on('close', function () {
-            connections.delete(conn.peer);
-            propagateConnections();
+          connections.delete(conn.peer);
+          propagateConnections();
         });
-    });
+      });
 
-    peer.on('error', function (err) {
+      peer.on('error', function (err) {
         if (err.type === 'unavailable-id') {
-            peeridno++;
-            initializePeer();
+          peeridno++;
+          initializePeer();
         }
-    });
-}
+      });
+    }
 
-function tryToConnectToPeers(currentPeerId) {
-    const targetPeerId = `ponderstatichost${ExistingPeerIDs}`;
-    if (currentPeerId === targetPeerId) {
+    function tryToConnectToPeers(currentPeerId) {
+      const targetPeerId = `ponderstatichost${ExistingPeerIDs}`;
+      if (currentPeerId === targetPeerId) {
         ExistingPeerIDs++;
         tryToConnectToPeers(currentPeerId);
         return;
-    }
+      }
 
-    const conn = peer.connect(targetPeerId);
+      const conn = peer.connect(targetPeerId);
 
-    conn.on('open', function () {
-       isConnected = true; 
+      conn.on('open', function () {
+        isConnected = true;
         connections.set(targetPeerId, conn);
         propagateConnections();
-
         conn.send({ type: 'initial-connections', data: Array.from(connections.keys()) });
         conn.send({ type: 'connect-to-others', peers: Array.from(connections.keys()) });
-    });
+      });
 
-    conn.on('error', function () {
+      conn.on('error', function () {
         ExistingPeerIDs++;
         tryToConnectToPeers(currentPeerId);
-    });
+      });
 
-    conn.on('close', function () {
+      conn.on('close', function () {
         connections.delete(targetPeerId);
         propagateConnections();
-    });
+      });
 
-    conn.on('data', handleIncomingData);
-}
+      conn.on('data', handleIncomingData);
+    }
 
-function handleIncomingData(data) {
-    if (data.type === 'connect-to-others') {
+    function handleIncomingData(data) {
+      if (data.type === 'connect-to-others') {
         data.peers.forEach(peerId => {
-            if (!connections.has(peerId) && peerId !== peer.id) {
-                const newConn = peer.connect(peerId);
-
-                newConn.on('open', function () {
-                    connections.set(peerId, newConn);
-                    propagateConnections();
-                    newConn.send(`Hello from ${peer.id}`);
-                });
-
-                newConn.on('error', console.error);
-            }
+          if (!connections.has(peerId) && peerId !== peer.id) {
+            const newConn = peer.connect(peerId);
+            newConn.on('open', function () {
+              connections.set(peerId, newConn);
+              propagateConnections();
+              newConn.send(`Hello from ${peer.id}`);
+            });
+            newConn.on('error', console.error);
+          }
         });
-    } else if (data.type === 'initial-connections') {
+      } else if (data.type === 'initial-connections') {
         data.data.forEach(peerId => {
-            if (!connections.has(peerId) && peerId !== peer.id) {
-                const newConn = peer.connect(peerId);
-
-                newConn.on('open', function () {
-                    connections.set(peerId, newConn);
-                    propagateConnections();
-                    newConn.send(`Hello from ${peer.id}`);
-                });
-
-                newConn.on('error', console.error);
-            }
+          if (!connections.has(peerId) && peerId !== peer.id) {
+            const newConn = peer.connect(peerId);
+            newConn.on('open', function () {
+              connections.set(peerId, newConn);
+              propagateConnections();
+              newConn.send(`Hello from ${peer.id}`);
+            });
+            newConn.on('error', console.error);
+          }
         });
-    } else if (data.type === 'position') {
+      } else if (data.type === 'position') {
         updateRemotePlayerPosition(data);
-    } else if (data.type === 'ping') {
+      } else if (data.type === 'ping') {
         console.log(`Ping received: ${data.message}`);
+      }
     }
-}    
 
-function propagateConnections() {
-    const currentConnections = Array.from(connections.keys());
-    connections.forEach(conn => {
+    function propagateConnections() {
+      const currentConnections = Array.from(connections.keys());
+      connections.forEach(conn => {
         conn.send({ type: 'connect-to-others', peers: currentConnections });
-    });
-}
+      });
+    }
 
-const remoteplayerElement = document.getElementById('player');
-const mypeerId = `ponderstatichost${peeridno}`;
-const players = {
-    local: { id: mypeerId, element: remoteplayerElement, positionX: player.positionX, positionY: player.positionY },
-    remote: null
-};
+    let lastBroadcastTime = 0;
+    const broadcastInterval = 69;
 
-function createPlayer(id, isLocal) {
-    const playerDiv = document.createElement('div');
-    playerDiv.className = 'remotePlayer';
-    playerDiv.style.position = 'absolute';
-    playerDiv.style.width = '100px';
-    playerDiv.style.height = '100px';
-    playerDiv.style.backgroundImage = 'url("spritesheet.png")';
-    gameMap.appendChild(playerDiv);
-
-    return {
-        id,
-        element: playerDiv,
-        positionX: 0,
-        positionY: 0,
-        targetX: 0,
-        targetY: 0,
-        xPercent: 0,
-        yPercent: 0,
-        spriteIndex: 1,
-        idleFrameTime: 0,
-        velocityX: 0,
-        velocityY: 0
-    };
-}
-
-   let lastBroadcastTime = 0;
-   const broadcastInterval = 69;
-
-   function broadcastPosition() {
-    const currentTime = Date.now();
-    if (isConnected && (currentTime - lastBroadcastTime > broadcastInterval)) {
+    function broadcastPosition() {
+      const currentTime = Date.now();
+      if (isConnected && (currentTime - lastBroadcastTime > broadcastInterval)) {
         const positionData = {
-            type: 'position',
-            id: peer.id,
-            x: player.positionX,
-            y: player.positionY
+          type: 'position',
+          id: peer.id,
+          x: player.positionX,
+          y: player.positionY
         };
-
         connections.forEach(conn => {
-            conn.send(positionData);
+          conn.send(positionData);
         });
-
         lastBroadcastTime = currentTime;
-    }
-}
-
-                     
-function interpolatePosition(remotePlayer, targetXPercent, targetYPercent) {
-    const interpolationFactor = 0.8;
-
-    const deltaX = targetXPercent - remotePlayer.xPercent;
-    const deltaY = targetYPercent - remotePlayer.yPercent;
-
-    remotePlayer.xPercent += deltaX * interpolationFactor;
-    remotePlayer.yPercent += deltaY * interpolationFactor;
-
-    const velocityX = deltaX * interpolationFactor;
-    const velocityY = deltaY * interpolationFactor;
-
-    updateRemotePlayerPositionOnScreen(remotePlayer);
-
-    updateRemotePlayerSprite(remotePlayer, velocityX, velocityY);
-}
-
-function updateRemotePlayerPositionOnScreen(remotePlayer) {
-    if (remotePlayer && remotePlayer.element) {
-        remotePlayer.element.style.left = `${remotePlayer.xPercent}px`;
-        remotePlayer.element.style.top = `${remotePlayer.yPercent}px`;
-    }
-}
-
-function updateRemotePlayerPosition(data) {
-
-    if (!remotePlayers[data.id]) {
-        remotePlayers[data.id] = createPlayer(data.id, false);
+      }
     }
 
-    const remotePlayer = remotePlayers[data.id];
+    initializePeer();
 
-    remotePlayer.targetXPercent = data.x;
-    remotePlayer.targetYPercent = data.y;
-
-    interpolatePosition(remotePlayer, remotePlayer.targetXPercent, remotePlayer.targetYPercent);
-
-    const velocityX = remotePlayer.targetXPercent - remotePlayer.xPercent;
-    const velocityY = remotePlayer.targetYPercent - remotePlayer.yPercent;
-    updateRemotePlayerSprite(remotePlayer, velocityX, velocityY);
-}
-
-function updateRemotePlayerSprite(remotePlayer, velocityX, velocityY) {
-    if (Math.abs(velocityX) < 0.1 && Math.abs(velocityY) < 0.1) {
-        remotePlayer.velocityX = 0;
-        remotePlayer.velocityY = 0;
-    } else {
-        remotePlayer.velocityX = velocityX;
-        remotePlayer.velocityY = velocityY;
-    }
-
-    spriteController.updateSprite(remotePlayer);
-}
-
-   
-   
-initializePeer();
-   
-   
-   
-         
-
-//GAMELOOP
-
-
-function updateGame() {
-    inputController.updateVelocity();
-
-    player.velocityX *= player.friction;
-    player.velocityY *= player.friction;
-
-    if (Math.abs(player.velocityX) < 0.2) player.velocityX = 0;
-    if (Math.abs(player.velocityY) < 0.2) player.velocityY = 0;
-
-    const magnitude = Math.sqrt(player.velocityX ** 2 + player.velocityY ** 2);
-    if (magnitude > player.maxVelocity) {
-        player.velocityX = (player.velocityX / magnitude) * player.maxVelocity;
-        player.velocityY = (player.velocityY / magnitude) * player.maxVelocity;
-    }
-
-    player.positionX += player.velocityX;
-    player.positionY += player.velocityY;
-
-    checkCollision();
-    checkPlayerCollisions();
-
-    playerElement.style.left = `${player.positionX}px`;
-    playerElement.style.top = `${player.positionY}px`;
-
-    gameMap.style.left = `-${player.positionX - window.innerWidth / 2}px`;
-    gameMap.style.top = `-${player.positionY - window.innerHeight / 2}px`;
-
-    spriteController.updateSprite(player);
-
-    for (const id in remotePlayers) {
-        const remotePlayer = remotePlayers[id];
-        if (remotePlayer) {
-            const velocityX = remotePlayer.targetXPercent - remotePlayer.xPercent;
-            const velocityY = remotePlayer.targetYPercent - remotePlayer.yPercent;
-            updateRemotePlayerSprite(remotePlayer, velocityX, velocityY);
+    function updateGame() {
+      inputController.updateVelocity();
+      player.velocityX *= player.friction;
+      player.velocityY *= player.friction;
+      if (Math.abs(player.velocityX) < 0.2) player.velocityX = 0;
+      if (Math.abs(player.velocityY) < 0.2) player.velocityY = 0;
+      const mag = Math.hypot(player.velocityX, player.velocityY);
+      if (mag > player.maxVelocity) {
+        player.velocityX = (player.velocityX / mag) * player.maxVelocity;
+        player.velocityY = (player.velocityY / mag) * player.maxVelocity;
+      }
+      player.positionX += player.velocityX;
+      player.positionY += player.velocityY;
+      checkCollision();
+      checkPlayerCollisions();
+      playerElement.style.left = `${player.positionX}px`;
+      playerElement.style.top = `${player.positionY}px`;
+      gameMap.style.left = `-${player.positionX - window.innerWidth / 2}px`;
+      gameMap.style.top = `-${player.positionY - window.innerHeight / 2}px`;
+      spriteController.updateSprite(player);
+      for (const id in remotePlayers) {
+        const rp = remotePlayers[id];
+        if (rp) {
+          const vx = (rp.targetXPercent || rp.xPercent) - rp.xPercent;
+          const vy = (rp.targetYPercent || rp.yPercent) - rp.yPercent;
+          updateRemotePlayerSprite(rp, vx, vy);
         }
-    }
-
-    updatePlayerZIndex();
-
-    const currentTime = performance.now();
-    if (Math.abs(player.velocityX) > 0.2 || Math.abs(player.velocityY) > 0.2 || currentTime - lastBroadcastTime >= 1000) {
+      }
+      updatePlayerZIndex();
+      const currentTime = performance.now();
+      if (Math.abs(player.velocityX) > 0.2 || Math.abs(player.velocityY) > 0.2 || currentTime - lastBroadcastTime >= 1000) {
         broadcastPosition();
         lastBroadcastTime = currentTime;
+      }
+      requestAnimationFrame(updateGame);
     }
 
-    requestAnimationFrame(updateGame);
-}
-
-//MONSTERS
-
-function updateMonsters() {
-    for (const id in monsters) {
-        const monster = monsters[id];
-        const velocityX = monster.velocityX;
-        const velocityY = monster.velocityY;
-
-        monster.positionX += velocityX;
-        monster.positionY += velocityY;
-
-        spriteController.updateSprite(monster);
-    }
-}
-
-
-
-
-   
-   updateGame();
-
-    </script>
+    updateGame();
+  </script>
 </body>
 </html>
